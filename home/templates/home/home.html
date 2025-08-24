@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Accueil - Physique Chimie Online{% endblock %}
+
+{% block content %}
+<section class="text-center mb-10">
+  <h1 class="text-4xl font-bold text-blue-800 mb-4">Bienvenue sur Physique Chimie Online</h1>
+  <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+    Des cours clairs, des exercices interactifs et des outils uniques pour apprendre autrement.
+    <br>
+    <span class="font-semibold text-blue-700">Notre originalité :</span> générateurs de QCM, devoirs automatiques,
+    fiches méthodes et bien plus.
+  </p>
+</section>
+
+<section class="bg-blue-50 rounded-lg shadow-md p-6 mb-10">
+  <h2 class="text-2xl font-semibold text-blue-800 mb-6 text-center">Explorez le référentiel</h2>
+
+  <!-- Onglets cycles -->
+  <div id="cycles-container" class="flex w-full mb-4 border-b border-blue-200"></div>
+
+  <!-- Onglets niveaux -->
+  <div id="niveaux-container" class="flex w-full mb-8 border-b border-blue-100 hidden"></div>
+
+  <!-- Cartes thèmes + chapitres -->
+  <div id="themes-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+</section>
+
+<!-- On insère le JSON généré par Django -->
+<script id="referentiel-data" type="application/json">
+  {{ data_json|safe }}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cyclesContainer = document.getElementById("cycles-container");
+  const niveauxContainer = document.getElementById("niveaux-container");
+  const themesContainer = document.getElementById("themes-container");
+
+  const data = JSON.parse(document.getElementById("referentiel-data").textContent);
+
+  // 🔹 Mémoire du dernier niveau sélectionné par cycle
+  const lastSelectedByCycle = {};
+
+  // === CYCLES ===
+  Object.entries(data).forEach(([cycleId, cycle]) => {
+    const btn = document.createElement("button");
+    btn.className =
+      "cycle-btn flex-1 py-2 font-medium text-center bg-blue-100 hover:bg-blue-200 transition-colors";
+    btn.textContent = cycle.nom;
+    btn.dataset.cycle = cycleId;
+    cyclesContainer.appendChild(btn);
+
+    btn.addEventListener("click", () => {
+      // Reset état actif
+      document.querySelectorAll(".cycle-btn").forEach(b => {
+        b.classList.remove("bg-blue-600", "text-white");
+        b.classList.add("bg-blue-100");
+      });
+      btn.classList.remove("bg-blue-100");
+      btn.classList.add("bg-blue-600", "text-white");
+
+      // Réinitialiser contenu
+      themesContainer.innerHTML = "";
+      niveauxContainer.innerHTML = "";
+      niveauxContainer.classList.remove("hidden");
+
+      // === NIVEAUX ===
+      cycle.niveaux.forEach((n) => {
+        const nBtn = document.createElement("button");
+        nBtn.className =
+          "niveau-btn flex-1 py-2 text-sm text-center bg-blue-100 hover:bg-blue-200 transition-colors";
+        nBtn.textContent = n.nom;
+        nBtn.dataset.niveau = n.id;
+        niveauxContainer.appendChild(nBtn);
+
+        nBtn.addEventListener("click", () => {
+          // Reset état actif
+          document.querySelectorAll(".niveau-btn").forEach(b => {
+            b.classList.remove("bg-blue-600", "text-white");
+            b.classList.add("bg-blue-100");
+          });
+          nBtn.classList.remove("bg-blue-100");
+          nBtn.classList.add("bg-blue-600", "text-white");
+
+          themesContainer.innerHTML = "";
+
+          // === THEMES + CHAPITRES ===
+          if (n.themes.length === 4) {
+            // Layout spécial (1-2-1) pour sm+ (mobile = 1 colonne)
+            themesContainer.className = "grid grid-cols-1 sm:grid-cols-3 gap-6";
+
+            // Colonne gauche
+            themesContainer.appendChild(makeCard(n.themes[0]));
+
+            // Colonne centrale avec 2 cards empilées
+            const middleCol = document.createElement("div");
+            middleCol.className = "grid grid-rows-2 gap-6";
+            middleCol.appendChild(makeCard(n.themes[1]));
+            middleCol.appendChild(makeCard(n.themes[2]));
+            themesContainer.appendChild(middleCol);
+
+            // Colonne droite
+            themesContainer.appendChild(makeCard(n.themes[3]));
+          } else {
+            // Layout normal responsive
+            themesContainer.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6";
+            n.themes.forEach((t) => themesContainer.appendChild(makeCard(t)));
+          }
+
+          // 🔹 Mémoriser ce niveau comme dernier sélectionné pour ce cycle
+          lastSelectedByCycle[cycleId] = n.nom;
+        });
+      });
+
+      // 🔹 Choix auto niveau
+      let niveauAuto;
+      if (lastSelectedByCycle[cycleId]) {
+        // Reprendre le dernier niveau choisi
+        niveauAuto = Array.from(niveauxContainer.querySelectorAll(".niveau-btn"))
+          .find(b => b.textContent === lastSelectedByCycle[cycleId]);
+      } else {
+        // Par défaut : Seconde pour Lycée, Troisième pour Collège, sinon le premier
+        if (cycleId === "lycee") {
+          niveauAuto = Array.from(niveauxContainer.querySelectorAll(".niveau-btn"))
+            .find(b => b.textContent.includes("Seconde"));
+        } else if (cycleId === "college") {
+          niveauAuto = Array.from(niveauxContainer.querySelectorAll(".niveau-btn"))
+            .find(b => b.textContent.includes("Troisième"));
+        }
+        if (!niveauAuto) {
+          niveauAuto = niveauxContainer.querySelector(".niveau-btn");
+        }
+      }
+      if (niveauAuto) niveauAuto.click();
+    });
+  });
+
+  // === Fabrique une carte ===
+  function makeCard(t) {
+    const card = document.createElement("div");
+    card.className = "bg-white shadow-md rounded-lg p-4 border border-blue-100 flex flex-col";
+    card.innerHTML = `
+      <h3 class="text-lg font-semibold text-blue-700 mb-2">${t.nom}</h3>
+      <div class="text-gray-600 space-y-1 flex-1">
+        ${t.chapitres.map((c) => `<div>${c}</div>`).join("")}
+      </div>
+    `;
+    return card;
+  }
+
+  // 🔹 Au premier chargement : Lycée > Seconde
+  const lyceeBtn = cyclesContainer.querySelector('[data-cycle="lycee"]');
+  if (lyceeBtn) {
+    lyceeBtn.click();
+  } else {
+    const firstCycle = cyclesContainer.querySelector(".cycle-btn");
+    if (firstCycle) firstCycle.click();
+  }
+});
+</script>
+{% endblock %}

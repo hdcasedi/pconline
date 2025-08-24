@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Physique Chimie Online{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-blue-100 antialiased flex flex-col min-h-screen">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="flex h-20 items-center justify-between">
+        
+        <!-- LOGO + SLOGAN -->
+        <div class="flex items-center space-x-3">
+          {% load static %}
+          <img src="{% static 'images/logo.png' %}" alt="Logo" class="h-12 w-12 object-contain">
+          <div>
+            <div class="text-xl font-bold text-blue-600">Physique Chimie Online</div>
+            <div class="text-sm text-slate-500">Apprendre en ligne, réussir en classe.</div>
+          </div>
+        </div>
+
+        <!-- Bouton burger + bouton cours en ligne (mobile) -->
+        <div class="flex items-center gap-2 lg:hidden">
+          <a href="/cours/" class="bg-blue-600 text-white text-sm px-3 py-2 rounded-md hover:bg-blue-700">
+            Cours en ligne
+          </a>
+          <button id="menuButton" class="p-2 rounded-md hover:bg-slate-100">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- MENU (desktop) -->
+        <nav id="mainNav" class="hidden lg:flex items-center gap-4">
+          <ul class="flex items-stretch gap-2">
+            <!-- Apprendre et s’évaluer -->
+            <li>
+              <a href="/" class="block rounded-xl px-4 py-2.5 hover:bg-blue-100">
+                <span class="text-sm leading-5 text-blue-900">
+                  <span class="block font-medium">Apprendre</span>
+                  <span class="block text-slate-500 -mt-0.5">et s’évaluer</span>
+                </span>
+              </a>
+            </li>
+
+            <!-- Comprendre -->
+            <li>
+              <a href="/fiche-methode/" class="block rounded-xl px-4 py-2.5 hover:bg-blue-100">
+                <span class="text-sm leading-5 text-blue-900">
+                  <span class="block font-medium">Comprendre</span>
+                  <span class="block text-slate-500 -mt-0.5">Fiche méthodes</span>
+                </span>
+              </a>
+            </li>
+
+            <!-- L’atelier -->
+            <li class="relative group">
+              <a href="#" class="block rounded-xl px-4 py-2.5 hover:bg-blue-100">
+                <span class="text-sm leading-5 text-blue-900">
+                  <span class="block font-medium">L’atelier</span>
+                  <span class="block text-slate-500 -mt-0.5">Nos générateurs</span>
+                </span>
+              </a>
+              <!-- sous-menu -->
+              <ul class="absolute left-0 mt-1 hidden w-56 rounded-lg bg-white shadow-lg border border-slate-200 group-hover:block">
+                <li><a href="/generateur-qcm/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur de QCM</a></li>
+                <li><a href="/generateur-flashcard/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur de Flashcards</a></li>
+                <li><a href="/generateur-devoir/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur de Devoir</a></li>
+                <li><a href="/generateur-quizzup/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur QuizzUp</a></li>
+              </ul>
+            </li>
+
+            <!-- Mon compagnon -->
+            <li>
+              <a href="/mon-compagnon/" class="block rounded-xl px-4 py-2.5 hover:bg-blue-100">
+                <span class="text-sm leading-5 text-blue-900">
+                  <span class="block font-medium">Mon compagnon</span>
+                  <span class="block text-slate-500 -mt-0.5">Notre livre</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+
+          <!-- BOUTON COURS EN LIGNE (desktop) -->
+          <a href="/cours/" class="ml-4 bg-blue-600 text-white text-sm px-4 py-2 rounded-md hover:bg-blue-700">
+            Cours en ligne
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- MENU MOBILE (caché par défaut) -->
+    <div id="mobileNav" class="lg:hidden hidden bg-white border-t border-slate-200 shadow">
+      <ul class="flex flex-col py-2">
+        <li><a href="/" class="block px-4 py-2 hover:bg-blue-50">Apprendre et s’évaluer</a></li>
+        <li><a href="/fiche-methode/" class="block px-4 py-2 hover:bg-blue-50">Comprendre</a></li>
+        <li><a href="/generateur-qcm/" class="block px-4 py-2 hover:bg-blue-50">Générateur de QCM</a></li>
+        <li><a href="/generateur-flashcard/" class="block px-4 py-2 hover:bg-blue-50">Générateur de Flashcards</a></li>
+        <li><a href="/generateur-devoir/" class="block px-4 py-2 hover:bg-blue-50">Générateur de Devoir</a></li>
+        <li><a href="/generateur-quizzup/" class="block px-4 py-2 hover:bg-blue-50">Générateur QuizzUp</a></li>
+        <li><a href="/mon-compagnon/" class="block px-4 py-2 hover:bg-blue-50">Mon compagnon</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- CONTENU -->
+  <main class="flex-grow">
+    <div class="max-w-6xl mx-auto bg-white shadow p-8 my-8 rounded">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+  
+  <!-- Scripts JS spécifiques aux pages -->
+  {% block extra_js %}{% endblock %}
+
+  <!-- FOOTER -->
+  <footer class="bg-blue-600 text-center text-sm text-white py-4 mt-auto">
+    © 2025 Physique Chimie Online — Tous droits réservés
+  </footer>
+
+  <!-- SCRIPT burger -->
+  <script>
+    const btn = document.getElementById("menuButton");
+    const mobileNav = document.getElementById("mobileNav");
+    btn.addEventListener("click", () => {
+      mobileNav.classList.toggle("hidden");
+    });
+  </script>
+</body>
+</html>
