@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Physique Chimie Online{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  {% block extra_css %}{% endblock %}
+  
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$','$$'], ['\\[','\\]']]
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body class="bg-blue-100 antialiased flex flex-col min-h-screen">
 
@@ -15,13 +28,14 @@
         
         <!-- LOGO + SLOGAN -->
         <div class="flex items-center space-x-3">
-          {% load static %}
-          <img src="{% static 'images/logo.png' %}" alt="Logo" class="h-12 w-12 object-contain">
-          <div>
-            <div class="text-xl font-bold text-blue-600">Physique Chimie Online</div>
-            <div class="text-sm text-slate-500">Apprendre en ligne, réussir en classe.</div>
+            {% load static %}
+            <!-- Logo caché sur mobile, visible à partir de lg -->
+            <img src="{% static 'images/logo.png' %}" alt="Logo" class="h-12 w-12 object-contain hidden lg:block">
+            <div>
+              <div class="text-lg lg:text-xl font-bold text-blue-600">Physique Chimie Online</div>
+              <div class="text-xs lg:text-sm text-slate-500">Apprendre en ligne, réussir en classe.</div>
+            </div>
           </div>
-        </div>
 
         <!-- Bouton burger + bouton cours en ligne (mobile) -->
         <div class="flex items-center gap-2 lg:hidden">
@@ -110,7 +124,7 @@
 
   <!-- CONTENU -->
   <main class="flex-grow">
-    <div class="max-w-6xl mx-auto bg-white shadow p-8 my-8 rounded">
+    <div class="w-full sm:max-w-6xl sm:mx-auto bg-white shadow p-4 sm:p-8 my-4 sm:my-8 rounded">
       {% block content %}{% endblock %}
     </div>
   </main>

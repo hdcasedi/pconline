@@ -1,0 +1,33 @@
+{% extends "wagtailadmin/pages/edit.html" %}
+{% load wagtailadmin_tags %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer le niveau de la page parente
+    const parentNiveau = '{{ page.get_parent.specific.niveau.id|default:"" }}';
+    
+    if (parentNiveau) {
+        // Filtrer les options du select chapitre
+        const chapitreSelect = document.querySelector('select[name="chapitre"]');
+        if (chapitreSelect) {
+            const options = chapitreSelect.querySelectorAll('option');
+            options.forEach(function(option) {
+                if (option.value && option.value !== '') {
+                    // Vérifier si l'option correspond au niveau parent
+                    // Cette logique devra être adaptée selon la structure des données
+                    const optionText = option.textContent;
+                    if (!optionText.includes(parentNiveau)) {
+                        option.style.display = 'none';
+                    }
+                }
+            });
+        }
+    }
+});
+</script>
+{% endblock %}
+
+
+

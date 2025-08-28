@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block title %}Cours {{ niveau.nom }} - Physique Chimie Online{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- En-tête -->
+    <div class="mb-8">
+        <nav class="text-sm text-gray-600 mb-4">
+            <a href="/cours/" class="hover:text-blue-600">Cours en ligne</a>
+            <span class="mx-2">→</span>
+            <span class="text-blue-600">{{ niveau.nom }}</span>
+        </nav>
+        
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-blue-800 mb-2">Cours {{ niveau.nom }}</h1>
+            <p class="text-gray-600">{{ niveau.get_cycle_display }}</p>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="bg-blue-50 rounded-lg p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div>
+                <div class="text-2xl font-bold text-blue-800">{{ niveau.themes.count }}</div>
+                <div class="text-sm text-gray-600">Thèmes</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-blue-800">
+                    {% with total_chapitres=0 %}
+                        {% for theme in niveau.themes.all %}
+                            {% for chapitre in theme.chapitres.all %}
+                                {% with total_chapitres=total_chapitres|add:1 %}{% endwith %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ total_chapitres }}
+                    {% endwith %}
+                </div>
+                <div class="text-sm text-gray-600">Chapitres</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-blue-800">{{ cours_list|length }}</div>
+                <div class="text-sm text-gray-600">Cours</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des cours organisés par thème -->
+    {% if cours_list %}
+        <div class="space-y-8">
+            {% for theme in niveau.themes.all %}
+                {% if theme.chapitres.all %}
+                    <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                        <div class="p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-blue-700 mb-2">{{ theme.nom }}</h2>
+                            {% if theme.image %}
+                                <img src="{{ theme.image.get_rendition 'fill-400x200' }}" 
+                                     alt="{{ theme.nom }}"
+                                     class="w-full h-32 object-cover rounded mb-4">
+                            {% endif %}
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for chapitre in theme.chapitres.all %}
+                                    {% for cours in chapitre.cours.all %}
+                                        <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs text-gray-500">Ch. {{ chapitre.numero }}</span>
+                                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                    {{ chapitre.theme.niveau.nom }}
+                                                </span>
+                                            </div>
+                                            
+                                            <h3 class="font-medium text-gray-900 mb-2">
+                                                <a href="{{ cours.url }}" class="hover:text-blue-600 transition-colors">
+                                                    {{ cours.title }}
+                                                </a>
+                                            </h3>
+                                            
+                                            <p class="text-sm text-gray-600 mb-3">
+                                                {{ chapitre.titre }}
+                                            </p>
+                                            
+                                            <a href="{{ cours.url }}" 
+                                               class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800">
+                                                Lire le cours
+                                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-12">
+            <div class="text-gray-400 mb-4">
+                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun cours disponible</h3>
+            <p class="text-gray-600">Les cours pour {{ niveau.nom }} seront bientôt disponibles.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block title %}Cours en ligne - Physique Chimie Online{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- En-tête -->
+    <div class="mb-12 text-center">
+        <h1 class="text-4xl font-bold text-blue-800 mb-6">Cours en ligne</h1>
+        {% if page.intro %}
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto">{{ page.intro }}</p>
+        {% else %}
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                Découvrez nos cours de physique et chimie organisés par niveau. 
+                Choisissez votre niveau pour accéder aux cours correspondants.
+            </p>
+        {% endif %}
+    </div>
+
+    <!-- Sélection des niveaux -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for niveau in niveaux %}
+            <div class="bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
+                <div class="p-6">
+                    <div class="text-center mb-4">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-1">{{ niveau.nom }}</h3>
+                        <p class="text-sm text-gray-600">{{ niveau.get_cycle_display }}</p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                            <span>Thèmes disponibles :</span>
+                            <span class="font-medium">{{ niveau.themes.count }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                            <span>Cours disponibles :</span>
+                            <span class="font-medium">{{ niveau.cours_count }}</span>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'cours:cours_by_niveau' niveau_id=niveau.id %}" 
+                       class="w-full inline-flex items-center justify-center px-4 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                        Voir les cours
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-span-full text-center py-12">
+                <div class="text-gray-400 mb-4">
+                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun niveau disponible</h3>
+                <p class="text-gray-600">Les niveaux seront bientôt disponibles.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% load wagtailcore_tags %}
+
+{% if value.style == 'normal' %}
+  <div class="mb-4 text-{{ value.alignement }}">
+    {{ value.contenu|richtext }}
+  </div>
+{% elif value.style == 'exemple' %}
+  <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r">
+    <div class="font-semibold text-blue-800 mb-2">Exemple</div>
+    <div class="text-{{ value.alignement }}">
+      {{ value.contenu|richtext }}
+    </div>
+  </div>
+{% elif value.style == 'remarque' %}
+  <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
+    <div class="font-semibold text-yellow-800 mb-2">
+      {% if value.titre %}{{ value.titre }}{% else %}Remarque{% endif %}
+    </div>
+    <div class="text-{{ value.alignement }}">
+      {{ value.contenu|richtext }}
+    </div>
+  </div>
+{% elif value.style == 'definition' %}
+  <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-400 rounded-r">
+    <div class="font-semibold text-green-800 mb-2">
+      {% if value.titre %}{{ value.titre }}{% else %}Définition{% endif %}
+    </div>
+    <div class="text-{{ value.alignement }}">
+      {{ value.contenu|richtext }}
+    </div>
+  </div>
+{% endif %}
+
+

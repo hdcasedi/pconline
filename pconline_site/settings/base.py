@@ -27,6 +27,8 @@ INSTALLED_APPS = [
     "home",
     "referentiel",
     "search",
+    "cours",
+    "wagtail.contrib.table_block", 
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",
