@@ -1,0 +1,10 @@
+.venv/
+media/
+static/
+manual_backups/
+*.dump
+*.tar.gz
+.pg_env
+.env
+__pycache__/
+*.pyc
