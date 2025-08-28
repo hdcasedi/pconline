@@ -1,0 +1,13 @@
+{% load wagtailcore_tags %}
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+  <div class="lg:col-span-4">
+    {% for b in value.col1 %}{% include_block b %}{% endfor %}
+  </div>
+  <div class="lg:col-span-4">
+    {% for b in value.col2 %}{% include_block b %}{% endfor %}
+  </div>
+  <div class="lg:col-span-4">
+    {% for b in value.col3 %}{% include_block b %}{% endfor %}
+  </div>
+</div>

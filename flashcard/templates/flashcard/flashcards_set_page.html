@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block title %}{{ page.title }} - Flashcards{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4">
+  <div class="text-sm text-slate-600 mb-4">
+    <a href="/" class="hover:underline">Accueil</a>
+    <span class="mx-1">›</span>
+    <a href="{{ page.get_parent.url }}" class="hover:underline">{{ page.get_parent.title }}</a>
+    <span class="mx-1">›</span>
+    <span class="text-slate-900 font-medium">{{ page.title }}</span>
+  </div>
+
+  <h1 class="text-2xl font-bold text-blue-700 mb-4">{{ page.title }}</h1>
+
+  {% if page.cards.all %}
+    <div class="mb-4">
+      <button id="shuffleBtn" class="px-3 py-1.5 rounded bg-blue-600 text-white text-sm hover:bg-blue-700">Mélanger</button>
+      <span class="ml-3 text-sm text-slate-600">Cartes: {{ page.cards.count }}</span>
+    </div>
+    <div id="cardsWrap" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for c in page.cards.all %}
+        {% if c.is_active %}
+        <div class="bg-white rounded-lg shadow border border-slate-200 p-4 flex flex-col">
+          <div class="prose prose-sm max-w-none">{{ c.question|richtext }}</div>
+          {% if c.image %}
+            <img src="{{ c.image.file.url }}" class="mt-3 rounded" alt="">
+          {% endif %}
+          {% if c.video_url %}
+            <div class="mt-3">
+              <iframe class="w-full aspect-video rounded" src="{{ c.video_url }}" allowfullscreen></iframe>
+            </div>
+          {% endif %}
+          <button class="mt-3 inline-flex items-center self-start text-sm text-blue-700 hover:underline js-toggle">Voir la réponse</button>
+          <div class="js-answer prose prose-sm max-w-none mt-3 hidden">{{ c.answer|richtext }}</div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-slate-600">Aucune carte pour l'instant.</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  // toggle réponses
+  document.querySelectorAll('.js-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const ans = btn.parentElement.querySelector('.js-answer');
+      ans.classList.toggle('hidden');
+      btn.textContent = ans.classList.contains('hidden') ? 'Voir la réponse' : 'Masquer la réponse';
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([ans]).catch(()=>{});
+      }
+    });
+  });
+
+  // mélange simple (DOM reorder)
+  const wrap = document.getElementById('cardsWrap');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  if (wrap && shuffleBtn) {
+    shuffleBtn.addEventListener('click', ()=>{
+      const nodes = Array.from(wrap.children);
+      for (let i = nodes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        wrap.appendChild(nodes[j]);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([wrap]).catch(()=>{});
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -5,14 +5,14 @@
     {{ value.contenu|richtext }}
   </div>
 {% elif value.style == 'exemple' %}
-  <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r">
+  <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r toggleable-content exemple-block" style="display: none;">
     <div class="font-semibold text-blue-800 mb-2">Exemple</div>
     <div class="text-{{ value.alignement }}">
       {{ value.contenu|richtext }}
     </div>
   </div>
 {% elif value.style == 'remarque' %}
-  <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
+  <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r toggleable-content remarque-block" style="display: none;">
     <div class="font-semibold text-yellow-800 mb-2">
       {% if value.titre %}{{ value.titre }}{% else %}Remarque{% endif %}
     </div>

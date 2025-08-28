@@ -10,6 +10,10 @@ from wagtail.blocks import (
 from wagtail.contrib.table_block.blocks import TableBlock
 from wagtail.admin.forms import WagtailAdminPageForm
 from referentiel.models import Chapitre
+from flashcard.models import FlashcardSetPage, FlashcardItem
+from types import SimpleNamespace
+from wagtail.rich_text import RichText
+import random
 
 
 # ============== Blocs ==============
@@ -58,8 +62,8 @@ class TitreBlock(StructBlock):
         label="Niveau",
     )
     texte = CharBlock(label="Texte")
-    fiche_methode = BooleanBlock(default=False, label="Afficher bouton fiche méthode")
-    texte_bouton = CharBlock(default="Fiche méthode", label="Texte du bouton")
+    fiche_methode = BooleanBlock(default=False, required=False, label="Afficher bouton fiche méthode")
+    texte_bouton = CharBlock(default="Fiche méthode", required=False, label="Texte du bouton")
 
     class Meta:
         template = "cours/blocks/titre.html"
@@ -88,11 +92,94 @@ class CodeBlock(StructBlock):
         label = "Code"
 
 
+# === NEW: Section 2 colonnes (50/50, 67/33, 33/67) ===
+from wagtail.blocks import StructBlock, ChoiceBlock, StreamBlock
+
+class TwoColsBlock(StructBlock):
+    ratio = ChoiceBlock(
+        choices=[
+            ("50-50", "50 / 50"),
+            ("67-33", "67 / 33"),
+            ("33-67", "33 / 67"),
+        ],
+        default="50-50",
+        label="Disposition"
+    )
+
+    left = StreamBlock(
+        [
+            ("paragraphe", ParagrapheBlock()),
+            ("titre", TitreBlock()),
+            ("tableau", TableBlock()),
+            ("code", CodeBlock()),
+        ],
+        required=False,
+        label="Colonne gauche"
+    )
+    right = StreamBlock(
+        [
+            ("paragraphe", ParagrapheBlock()),
+            ("titre", TitreBlock()),
+            ("tableau", TableBlock()),
+            ("code", CodeBlock()),
+        ],
+        required=False,
+        label="Colonne droite"
+    )
+
+    class Meta:
+        template = "cours/blocks/section_two_cols.html"
+        icon = "placeholder"
+        label = "Section 2 colonnes"
+
+
+# === NEW: Section 3 colonnes (33/33/33) ===
+class ThreeColsBlock(StructBlock):
+    col1 = StreamBlock(
+        [
+            ("paragraphe", ParagrapheBlock()),
+            ("titre", TitreBlock()),
+            ("tableau", TableBlock()),
+            ("code", CodeBlock()),
+        ],
+        required=False,
+        label="Colonne 1"
+    )
+    col2 = StreamBlock(
+        [
+            ("paragraphe", ParagrapheBlock()),
+            ("titre", TitreBlock()),
+            ("tableau", TableBlock()),
+            ("code", CodeBlock()),
+        ],
+        required=False,
+        label="Colonne 2"
+    )
+    col3 = StreamBlock(
+        [
+            ("paragraphe", ParagrapheBlock()),
+            ("titre", TitreBlock()),
+            ("tableau", TableBlock()),
+            ("code", CodeBlock()),
+        ],
+        required=False,
+        label="Colonne 3"
+    )
+
+    class Meta:
+        template = "cours/blocks/section_three_cols.html"
+        icon = "placeholder"
+        label = "Section 3 colonnes"
+
+
 class CoursContentBlock(StreamBlock):
     paragraphe = ParagrapheBlock()
     titre = TitreBlock()
     tableau = TableBlock()
     code = CodeBlock()
+    # NEW:
+    section_2cols = TwoColsBlock()
+    section_3cols = ThreeColsBlock()
 
 
 # ============== Pages ==============
@@ -211,4 +298,66 @@ class CoursPage(Page):
         verbose_name = "Cours"
 
     parent_page_types = ['cours.CoursIndexPage']
-    subpage_types = []
+    subpage_types = ['flashcard.FlashcardSetPage']
+
+    def all_flashcards_qs(self):
+        """Toutes les cartes actives de tous les sets enfants de ce cours."""
+        set_ids = self.get_children().type(FlashcardSetPage).values_list('id', flat=True)
+        return FlashcardItem.objects.filter(page_id__in=set_ids, is_active=True)
+
+    def random_flashcards(self, limit=10):
+        """Un échantillon au hasard (sans ORDER BY ?) efficace."""
+        ids = list(self.all_flashcards_qs().values_list('id', flat=True))
+        random.shuffle(ids)
+        return FlashcardItem.objects.filter(id__in=ids[:limit])
+
+    def definition_flashcards(self):
+        """
+        Extrait du StreamField toutes les définitions (ParagrapheBlock style='definition')
+        et les expose comme 'pseudo-cartes' compatibles avec le rendu des flashcards.
+        """
+        cards = []
+        for block in self.contenu:  # StreamField
+            if block.block_type == 'paragraphe':
+                v = block.value  # StructValue
+                try:
+                    if v.get('style') == 'definition':
+                        titre = v.get('titre') or "Définition"
+                        contenu = v.get('contenu')  # RichText (Wagtail)
+                        # On construit un objet simple avec les mêmes attr que FlashcardItem
+                        cards.append(SimpleNamespace(
+                            is_virtual=True,
+                            question=RichText(f"<strong>{titre}</strong>"),
+                            answer=contenu,
+                            image=None,
+                            video_url="",
+                            tags="definition"
+                        ))
+                except Exception:
+                    continue
+        return cards
+
+    def random_cards_with_definitions(self, limit=10):
+        """
+        Mélange flashcards DB + définitions du cours et renvoie 'limit' cartes.
+        """
+        pool = list(self.all_flashcards_qs()) + self.definition_flashcards()
+        random.shuffle(pool)
+        return pool[:limit]
+
+    def random_cards10(self):
+        """
+        Wrapper sans argument pour les templates :
+        - si random_cards_with_definitions existe => 10 cartes mélangées (flashcards + définitions)
+        - sinon fallback => 10 flashcards DB
+        """
+        if hasattr(self, "random_cards_with_definitions"):
+            try:
+                return self.random_cards_with_definitions(limit=10)
+            except TypeError:
+                # au cas où la signature ne prend pas 'limit'
+                return self.random_cards_with_definitions()
+        # Fallback si pas de méthode avancée
+        if hasattr(self, "all_flashcards_qs"):
+            return self.all_flashcards_qs()[:10]
+        return []

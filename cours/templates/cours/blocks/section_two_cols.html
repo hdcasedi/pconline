@@ -1,0 +1,27 @@
+{% load wagtailcore_tags %}
+
+{# 12 colonnes sur desktop, empilé sur mobile #}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+  {% if value.ratio == "50-50" %}
+    <div class="lg:col-span-6">
+      {% for b in value.left %}{% include_block b %}{% endfor %}
+    </div>
+    <div class="lg:col-span-6">
+      {% for b in value.right %}{% include_block b %}{% endfor %}
+    </div>
+  {% elif value.ratio == "67-33" %}
+    <div class="lg:col-span-8">
+      {% for b in value.left %}{% include_block b %}{% endfor %}
+    </div>
+    <div class="lg:col-span-4">
+      {% for b in value.right %}{% include_block b %}{% endfor %}
+    </div>
+  {% elif value.ratio == "33-67" %}
+    <div class="lg:col-span-4">
+      {% for b in value.left %}{% include_block b %}{% endfor %}
+    </div>
+    <div class="lg:col-span-8">
+      {% for b in value.right %}{% include_block b %}{% endfor %}
+    </div>
+  {% endif %}
+</div>

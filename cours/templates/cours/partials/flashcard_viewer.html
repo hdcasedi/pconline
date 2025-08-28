@@ -1,0 +1,224 @@
+{# ==== FLASHCARD STUDY VIEWER (une carte à la fois) ==== #}
+{% load wagtailcore_tags %}
+
+{% with cards=cards|default:page.random_cards10 %}
+<div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+  <!-- Top bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center rounded-md bg-white/15 px-2 py-1 text-xs font-medium">
+        Entraînement
+      </span>
+      <div class="text-sm opacity-90">
+        <span id="fc-counter">0 / 0</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs">
+      <span class="inline-flex items-center gap-1 rounded-md bg-emerald-500/25 px-2 py-1">
+        ✅ Justes: <strong id="fc-correct">0</strong>
+      </span>
+      <span class="inline-flex items-center gap-1 rounded-md bg-rose-500/25 px-2 py-1">
+        ❌ Faux: <strong id="fc-wrong">0</strong>
+      </span>
+      <button id="fc-reshuffle" type="button"
+              class="ml-2 inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 hover:bg-white/20">
+        🔀 Mélanger
+      </button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="h-1 bg-slate-100">
+    <div id="fc-progress" class="h-1 bg-blue-600 w-0 transition-all duration-300"></div>
+  </div>
+
+  <!-- Card area -->
+  <div class="p-4">
+    <div id="fc-card" class="fc mx-auto max-w-3xl bg-white border border-slate-200 rounded-xl shadow-sm h-64 sm:h-72 lg:h-80 cursor-pointer select-none">
+      <div class="fc-inner w-full h-full">
+        <!-- Face question -->
+        <div class="fc-face flex flex-col h-full">
+          <!-- En-tête bleu -->
+          <div class="bg-blue-600 text-white px-4 py-3 flex items-center justify-center">
+            <h4 class="text-sm font-semibold uppercase tracking-wide">Question</h4>
+          </div>
+          <!-- Contenu centré -->
+          <div class="flex-1 flex items-center justify-center p-5">
+            <div id="fc-q" class="prose max-w-none text-slate-800 text-center"></div>
+          </div>
+        </div>
+        <!-- Face réponse -->
+        <div class="fc-face fc-back flex flex-col h-full">
+          <!-- En-tête vert -->
+          <div class="bg-emerald-600 text-white px-4 py-3 flex items-center justify-center">
+            <h4 class="text-sm font-semibold uppercase tracking-wide">Réponse</h4>
+          </div>
+          <!-- Contenu centré -->
+          <div class="flex-1 flex items-center justify-center p-5">
+            <div id="fc-a" class="prose max-w-none text-slate-800 text-center"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
+      <button id="fc-show" type="button"
+              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">
+        👀 Voir la réponse (Espace)
+      </button>
+      <button id="fc-wrong-btn" type="button"
+              class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700">
+        ❌ Faux (F)
+      </button>
+      <button id="fc-correct-btn" type="button"
+              class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+        ✅ Juste (J)
+      </button>
+      <div class="mx-2 hidden sm:block w-px h-6 bg-slate-200"></div>
+      <button id="fc-prev" type="button"
+              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50">
+        ← Précédent (P)
+      </button>
+      <button id="fc-next" type="button"
+              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50">
+        Suivant → (N)
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden source (question/réponse déjà rendues en HTML) -->
+  <div id="fc-source" class="hidden">
+    {% for c in cards %}
+      <div class="flash-item">
+        <div class="q">{% if c.question %}{{ c.question|richtext }}{% else %}<p>(sans question)</p>{% endif %}</div>
+        <div class="a">{% if c.answer %}{{ c.answer|richtext }}{% else %}<p>(sans réponse)</p>{% endif %}</div>
+      </div>
+    {% empty %}
+      <div class="flash-item"><div class="q"><p>Aucune carte.</p></div><div class="a"><p>—</p></div></div>
+    {% endfor %}
+  </div>
+</div>
+
+<style>
+/* flip */
+.fc { perspective: 1200px; }
+.fc-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .5s; }
+.fc.flipped .fc-inner { transform: rotateY(180deg); }
+.fc-face { position: absolute; inset: 0; backface-visibility: hidden; }
+.fc-back { transform: rotateY(180deg); }
+.prose :where(pre, code){ white-space: pre-wrap; }
+</style>
+
+<script>
+(function(){
+  // ——— helpers
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const src = $("#fc-source");
+  const items = $$(".flash-item", src).map(el => ({
+    q: $(".q", el)?.innerHTML?.trim() || "",
+    a: $(".a", el)?.innerHTML?.trim() || ""
+  }));
+
+  // shuffle util
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // state
+  let idx = 0, total = items.length, correct = 0, wrong = 0;
+
+  // els
+  const card = $("#fc-card");
+  const qEl = $("#fc-q");
+  const aEl = $("#fc-a");
+  const counter = $("#fc-counter");
+  const progress = $("#fc-progress");
+  const showBtn = $("#fc-show");
+  const okBtn = $("#fc-correct-btn");
+  const koBtn = $("#fc-wrong-btn");
+  const prevBtn = $("#fc-prev");
+  const nextBtn = $("#fc-next");
+  const reshuffleBtn = $("#fc-reshuffle");
+  const okCount = $("#fc-correct");
+  const koCount = $("#fc-wrong");
+
+  function setProgress(){
+    const pct = total ? Math.min(100, Math.round(((idx+1)/total)*100)) : 0;
+    progress.style.width = pct+"%";
+    counter.textContent = (total? (idx+1):0) + " / " + total;
+    okCount.textContent = correct;
+    koCount.textContent = wrong;
+  }
+
+  function typesetMath(scope){
+    if (window.MathJax && MathJax.typesetPromise) {
+      MathJax.typesetPromise([scope]).catch(()=>{});
+    }
+  }
+
+  function render(){
+    if (!total) {
+      qEl.innerHTML = "<p>Aucune carte.</p>";
+      aEl.innerHTML = "<p>—</p>";
+      setProgress();
+      return;
+    }
+    const it = items[idx];
+    qEl.innerHTML = it.q || "<p>(sans question)</p>";
+    aEl.innerHTML = it.a || "<p>(sans réponse)</p>";
+    card.classList.remove("flipped");
+    setProgress();
+    typesetMath(card);
+  }
+
+  function flip(){
+    card.classList.toggle("flipped");
+    typesetMath(card);
+  }
+
+  function next(){
+    if (!total) return;
+    idx = (idx+1) % total;
+    render();
+  }
+
+  function prev(){
+    if (!total) return;
+    idx = (idx-1+total) % total;
+    render();
+  }
+
+  // events
+  card.addEventListener("click", flip);
+  showBtn.addEventListener("click", flip);
+  nextBtn.addEventListener("click", next);
+  prevBtn.addEventListener("click", prev);
+  okBtn.addEventListener("click", () => { correct++; next(); });
+  koBtn.addEventListener("click", () => { wrong++; next(); });
+  reshuffleBtn.addEventListener("click", () => {
+    shuffle(items); idx = 0; correct = 0; wrong = 0; render();
+  });
+
+  // keyboard
+  document.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === " "){ e.preventDefault(); flip(); }
+    else if (k === "n"){ next(); }
+    else if (k === "p"){ prev(); }
+    else if (k === "j"){ correct++; next(); }
+    else if (k === "f"){ wrong++; next(); }
+  });
+
+  // init
+  shuffle(items); // tirage au hasard initial
+  render();
+})();
+</script>
+{% endwith %}

@@ -1,0 +1,161 @@
+========================================
+Mémo SAUVEGARDE & RESTAURATION – pconline
+Serveur: /srv/pconline
+========================================
+
+0) ARBORESCENCE UTILE
+---------------------
+/srv/pconline
+  ├─ .venv/                     # venv python
+  ├─ manage.py
+  ├─ media/                     # uploads Wagtail (à sauvegarder)
+  ├─ static/                    # fichiers statiques (reconstruisables)
+  ├─ manual_backups/            # dumps DB + archives médias
+  ├─ backup_manual_pg.sh        # script snapshot app
+  └─ .pg_env                    # variables PG (ne pas committer)
+
+
+1) VARIABLES POSTGRES (facultatif mais pratique)
+-----------------------------------------------
+Fichier: /srv/pconline/.pg_env  (à créer UNE fois)
+Contenu type:
+  export PGHOST="localhost"
+  export PGPORT="5432"
+  export PGUSER="pconline"
+  export PGDATABASE="pconline"
+  export PGPASSWORD="*******"
+
+Sécuriser:
+  chmod 600 /srv/pconline/.pg_env
+
+Charger dans la session:
+  source /srv/pconline/.pg_env
+
+
+2) SNAPSHOT MANUEL COMPLET (App + DB + Médias)
+----------------------------------------------
+Lancer:
+  bash /srv/pconline/backup_manual_pg.sh
+
+Ce que fait le script, dans l’ordre:
+  • (Optionnel) Arrête Gunicorn / Nginx pendant la sauvegarde
+  • CODE: git add/commit (si tu acceptes) + tag snapshot-YYYYMMDD-HHMMSS
+  • DB: pg_dump -Fc → manual_backups/pg-YYYYMMDD-HHMMSS.dump
+  • MÉDIAS: tar.gz du dossier media → manual_backups/media-YYYYMMDD-HHMMSS.tar.gz
+  • REQUIREMENTS: pip freeze → manual_backups/requirements-YYYYMMDD-HHMMSS.txt
+  • Rotation: garde 10 fichiers récents / type
+  • (Optionnel) Redémarre services
+
+Lister les sauvegardes:
+  ls -lh /srv/pconline/manual_backups
+
+
+3) SAUVEGARDER À LA MAIN (si tu ne veux pas le script)
+------------------------------------------------------
+# 3.1 Code (commit + tag + push)
+  cd /srv/pconline
+  git add -A
+  git commit -m "feat: <ton message>"
+  git tag -f "snapshot-$(date +%Y%m%d-%H%M%S)"
+  git push -u origin main
+  git push --tags
+
+# 3.2 Base de données
+  source /srv/pconline/.pg_env
+  mkdir -p /srv/pconline/manual_backups
+  pg_dump -Fc -f /srv/pconline/manual_backups/pg-$(date +%Y%m%d-%H%M%S).dump
+
+# 3.3 Médias
+  tar -czf /srv/pconline/manual_backups/media-$(date +%Y%m%d-%H%M%S).tar.gz -C /srv/pconline media
+
+
+4) RESTAURER (ROLLBACK)
+-----------------------
+Ordre conseillé si gros bug:
+  1) Code → 2) DB → 3) Médias
+
+# 4.1 Revenir à une version de code (tag/commit)
+  cd /srv/pconline
+  git fetch --all --tags
+  git log --oneline --decorate --graph -20   # repérer le tag/commit
+  git reset --hard snapshot-YYYYMMDD-HHMMSS  # ou <commit>
+  source .venv/bin/activate
+  python manage.py collectstatic --noinput
+  python manage.py migrate
+  sudo systemctl restart pconline-gunicorn
+
+# 4.2 Restaurer la base (pg_restore)
+  source /srv/pconline/.pg_env
+  # Sauvegarder l’état actuel (optionnel)
+  pg_dump -Fc -f /srv/pconline/manual_backups/pg-before-restore-$(date +%Y%m%d-%H%M%S).dump
+
+  # Restauration « propre »
+  pg_restore -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -Fc --clean --if-exists \
+    /srv/pconline/manual_backups/pg-YYYYMMDD-HHMMSS.dump
+
+  sudo systemctl restart pconline-gunicorn
+
+  # Si le schéma est incompatible, forcer un reset du schéma:
+  # !! ATTENTION: supprime tout le contenu de la DB !!
+  # psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+  # pg_restore -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -Fc /srv/pconline/manual_backups/pg-YYYYMMDD-HHMMSS.dump
+
+# 4.3 Restaurer les médias
+  tar -xzf /srv/pconline/manual_backups/media-YYYYMMDD-HHMMSS.tar.gz -C /srv/pconline
+
+
+5) GIT – CONNEXION SSH (mémo rapide)
+------------------------------------
+# Config identité (une fois)
+  git config --global user.name "hdcasedi"
+  git config --global user.email "hdcasedi@users.noreply.github.com"
+
+# Clé SSH (si absente)
+  [ -f ~/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -C "contabo@pconline" -N "" -f ~/.ssh/id_ed25519
+  cat ~/.ssh/id_ed25519.pub   # à coller sur GitHub > Settings > SSH keys
+
+# Tester
+  ssh -T git@github.com   # attendu: Hi hdcasedi! ...
+
+# Remote en SSH
+  cd /srv/pconline
+  git remote set-url origin git@github.com:hdcasedi/pconline.git
+  git push -u origin main
+  git push --tags
+
+
+6) .pgpass (pour éviter PGPASSWORD en clair)
+--------------------------------------------
+Fichier: /home/deploy/.pgpass (droits 600)
+Contenu (une ligne):
+  localhost:5432:pconline:pconline:TON_MOT_DE_PASSE
+
+Ensuite, plus besoin d’exporter PGPASSWORD.
+
+
+7) SNAPSHOT VPS (Contabo)
+-------------------------
+Panneau client Contabo → VPS → Snapshots → Create Snapshot
+• Reprend l’état COMPLET du serveur (disque → facturation d’espace).
+• Restore = retour à l’état exact (attention: ça remplace tout).
+
+
+8) DÉPANNAGE RAPIDE
+-------------------
+• Mot de passe PostgreSQL perdu:
+  sudo -u postgres psql
+  \du        # lister rôles
+  ALTER USER pconline WITH PASSWORD 'NOUVEAU_MDP';
+  \q
+  # Mettre à jour le MDP côté Django (.env/.pg_env) puis:
+  sudo systemctl restart pconline-gunicorn
+
+• Clés SSH GitHub:
+  ssh -T git@github.com   # si Permission denied (publickey): ajouter la clé publique sur GitHub.
+
+• Fichiers secrets à ne PAS committer:
+  .pg_env, .env, dumps, archives, media/static (générables)
+  -> Assurés via .gitignore.
+
+
+FIN – Garde ce fichier sous la main pour toutes tes sauvegardes/restaurations.

@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "referentiel",
     "search",
     "cours",
+    "flashcard",
     "wagtail.contrib.table_block", 
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
