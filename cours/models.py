@@ -172,14 +172,43 @@ class ThreeColsBlock(StructBlock):
         label = "Section 3 colonnes"
 
 
+# --- add near other block classes ---
+from wagtail.blocks import StructBlock, CharBlock, RichTextBlock
+
+class FormulaireBlock(StructBlock):
+    # Ligne 1 : 100% rich text
+    ligne1 = RichTextBlock(
+        features=['h2','h3','bold','italic','underline','link','superscript','subscript',
+                  'strikethrough','ol','ul','hr','blockquote','code','image','embed'],
+        label="Ligne 1 (texte riche plein largeur)"
+    )
+    # Ligne 2 (33%) : formule TeX (MathJax), centrée H/V
+    formule = CharBlock(
+        required=True,
+        label="Formule (TeX / MathJax, sans délimiteurs)",
+        help_text=r"Ex: E = mc^2  (les délimiteurs $$...$$ seront ajoutés au rendu)"
+    )
+    # Ligne 2 (67%) : liste rich text
+    liste = RichTextBlock(
+        features=['bold','italic','underline','link','ol','ul','hr','blockquote','code','image','embed'],
+        label="Liste (texte riche)"
+    )
+
+    class Meta:
+        template = "cours/blocks/formulaire.html"
+        icon = "form"
+        label = "Formulaire"
+
+
 class CoursContentBlock(StreamBlock):
     paragraphe = ParagrapheBlock()
     titre = TitreBlock()
-    tableau = TableBlock()
+    tableau = TableBlock(template='cours/blocks/tableau.html')
     code = CodeBlock()
     # NEW:
     section_2cols = TwoColsBlock()
     section_3cols = ThreeColsBlock()
+    formulaire = FormulaireBlock()
 
 
 # ============== Pages ==============
@@ -298,7 +327,12 @@ class CoursPage(Page):
         verbose_name = "Cours"
 
     parent_page_types = ['cours.CoursIndexPage']
-    subpage_types = ['flashcard.FlashcardSetPage']
+    subpage_types = [
+        'flashcard.FlashcardSetPage',   # déjà présent
+        'qcm.QcmQuestionAPage',         # Type A (multi-propositions)
+        'qcm.QcmBankBPage',             # Type B (banque de variantes)
+        'qcm.QcmQuestionCPage',         # Type C (listes de réponses)
+    ]
 
     def all_flashcards_qs(self):
         """Toutes les cartes actives de tous les sets enfants de ce cours."""
@@ -361,3 +395,122 @@ class CoursPage(Page):
         if hasattr(self, "all_flashcards_qs"):
             return self.all_flashcards_qs()[:10]
         return []
+
+    def get_context(self, request):
+        ctx = super().get_context(request)
+
+        # On tente d'importer l'app QCM. Si non installée: on passe.
+        try:
+            from qcm.models import QcmQuestionAPage, QcmBankBPage, QcmQuestionCPage
+        except Exception:
+            ctx["qcm_set"] = []
+            return ctx
+
+        # Par défaut, on ne génère que les QCM sans rédaction
+        # Mais on peut accepter un paramètre pour inclure les QCM avec rédaction
+        include_justification = request.GET.get('justification', 'false').lower() == 'true'
+
+        # Récupérer les enfants (publiés) de la CoursPage
+        children = self.get_children().live().specific()
+
+        # ---- TYPE A : une question = 4 options (1 correcte + 3 distracteurs) ----
+        qcm_a = [c for c in children if isinstance(c, QcmQuestionAPage)]
+        payload_a = []
+        for q in qcm_a:
+            # Filtrer selon le paramètre sans_redaction
+            if not q.sans_redaction and not include_justification:
+                continue
+                
+            opts = list(q.options.all())
+            if len(opts) < 4:
+                continue  # on exige 4 propositions min
+            corrects = [o for o in opts if o.is_correct]
+            incorrects = [o for o in opts if not o.is_correct]
+            if not corrects:
+                continue
+
+            correct = random.choice(corrects)
+            # 3 distracteurs si possible, sinon on saute
+            if len(incorrects) < 3:
+                continue
+            distractors = random.sample(incorrects, 3)
+
+            # pool final et shuffle
+            final_opts = [{"html": o.text, "is_correct": (o == correct)} for o in [correct, *distractors]]
+            random.shuffle(final_opts)
+
+            payload_a.append({
+                "type": "A",
+                "statement": q.statement,
+                "image": q.image,  # Ajouter l'image
+                "options": final_opts,
+                "explanation": getattr(q, "explanation", ""),
+            })
+
+        # ---- TYPE B : piocher 1 variante correcte + 3 distracteurs dans la même banque ----
+        qcm_banks = [c for c in children if isinstance(c, QcmBankBPage)]
+        payload_b = []
+        for bank in qcm_banks:
+            # Filtrer selon le paramètre sans_redaction
+            if not bank.sans_redaction and not include_justification:
+                continue
+                
+            variants = list(bank.variants.all())
+            if len(variants) < 4:
+                continue
+            correct_var = random.choice(variants)
+            other_vars = [v for v in variants if v != correct_var]
+            distractors = random.sample(other_vars, 3)
+
+            # Construire options : 1 correcte (answer de correct_var) + 3 distracteurs (answers d'autres variantes)
+            opts = [{"html": correct_var.answer, "is_correct": True}]
+            for d in distractors:
+                opts.append({"html": d.answer, "is_correct": False})
+            random.shuffle(opts)
+
+            payload_b.append({
+                "type": "B",
+                "statement": correct_var.statement,
+                "options": opts,
+                "explanation": "",  # Pas d'explication au niveau des variantes
+            })
+
+        # ---- TYPE C : 1 bonne réponse + 3 mauvaises réponses depuis les listes ----
+        qcm_c = [c for c in children if isinstance(c, QcmQuestionCPage)]
+        payload_c = []
+        for q in qcm_c:
+            # Filtrer selon le paramètre sans_redaction
+            if not q.sans_redaction and not include_justification:
+                continue
+                
+            correct_answers = q.get_correct_answers_list()
+            incorrect_answers = q.get_incorrect_answers_list()
+            
+            if len(correct_answers) < 1 or len(incorrect_answers) < 3:
+                continue  # on exige au moins 1 bonne réponse et 3 mauvaises
+            
+            # Choisir 1 bonne réponse au hasard
+            correct = random.choice(correct_answers)
+            # Choisir 3 mauvaises réponses au hasard
+            distractors = random.sample(incorrect_answers, 3)
+            
+            # Construire les options
+            opts = [{"html": correct, "is_correct": True}]
+            for d in distractors:
+                opts.append({"html": d, "is_correct": False})
+            random.shuffle(opts)
+            
+            payload_c.append({
+                "type": "C",
+                "statement": q.statement,
+                "image": q.image,  # Ajouter l'image
+                "options": opts,
+                "explanation": getattr(q, "explanation", ""),
+            })
+
+        # Mélange global + limite 10
+        all_q = payload_a + payload_b + payload_c
+        random.shuffle(all_q)
+        ctx["qcm_set"] = all_q[:10]
+
+        return ctx

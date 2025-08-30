@@ -3,7 +3,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils.functional import cached_property
 
-from wagtail.models import Page
+from wagtail.models import Page, Orderable
 from wagtail.admin.panels import FieldPanel, InlinePanel, MultiFieldPanel
 from wagtail.documents.models import Document
 from wagtail.images import get_image_model
@@ -17,7 +17,7 @@ import io
 Image = get_image_model()
 
 
-class FlashcardItem(models.Model):
+class FlashcardItem(Orderable):  # <- héritage Orderable pour InlinePanel (tri + bouton +)
     """Une carte appartenant à un set."""
     page = ParentalKey(
         "flashcard.FlashcardSetPage",
@@ -43,19 +43,18 @@ class FlashcardItem(models.Model):
     video_url = models.URLField(blank=True)
     tags = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
-    sort_order = models.IntegerField(default=0)
 
     panels = [
+        FieldPanel('is_active'),
         FieldPanel('question'),
         FieldPanel('answer'),
         FieldPanel('image'),
         FieldPanel('video_url'),
         FieldPanel('tags'),
-        FieldPanel('is_active'),
     ]
 
     class Meta:
-        ordering = ["sort_order", "id"]
+        ordering = ["sort_order", "id"]  # Orderable fournit sort_order
 
 
 class FlashcardSetPage(Page):
@@ -119,27 +118,100 @@ class FlashcardSetPage(Page):
 
     def _import_from_csv(self, raw_bytes: bytes):
         created = 0
-        text = raw_bytes.decode('utf-8', errors='ignore')
-        # détection simple ; sinon fallback à ,
+        
+        # Essayer différents encodages pour gérer les caractères spéciaux
+        encodings_to_try = ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252', 'iso-8859-1']
+        text = None
+        
+        for encoding in encodings_to_try:
+            try:
+                text = raw_bytes.decode(encoding)
+                print(f"Encodage réussi: {encoding}")
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if text is None:
+            # Fallback: utiliser utf-8 avec errors='replace' au lieu de 'ignore'
+            text = raw_bytes.decode('utf-8', errors='replace')
+            print("Encodage: utf-8 avec remplacement des caractères invalides")
+
+        # Nettoyer les caractères problématiques
+        text = text.replace('\ufeff', '')  # Supprimer BOM UTF-8
+        
+        # Sniffer sur un échantillon plus large (pas juste la 1re ligne)
+        sample = "\n".join(text.splitlines()[:5]) or text
         try:
-            sniffer = csv.Sniffer()
-            dialect = sniffer.sniff(text.splitlines()[0])
+            dialect = csv.Sniffer().sniff(sample)
         except Exception:
-            class Simple(dialect:=csv.excel):  # noqa
+            class Simple(csv.excel):
                 delimiter = ','
             dialect = Simple
-        reader = csv.DictReader(io.StringIO(text), dialect=dialect)
 
-        for row in reader:
+        reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+        
+        # Debug: afficher les en-têtes détectés
+        print(f"En-têtes détectés: {reader.fieldnames}")
+
+        for row_num, row in enumerate(reader, start=2):  # start=2 car ligne 1 = en-têtes
             q = (row.get('question') or '').strip()
             a = (row.get('answer') or '').strip()
-            if not q and not a:
+            
+            # Nettoyer les caractères spéciaux problématiques
+            q = self._clean_text(q)
+            a = self._clean_text(a)
+            
+            # Debug: afficher les valeurs pour les premières lignes
+            if row_num <= 5:
+                print(f"Ligne {row_num}: question='{q}', answer='{a}'")
+                print(f"Ligne {row_num}: question (repr)='{repr(q)}', answer (repr)='{repr(a)}'")
+            
+            # Vérifier si les colonnes existent
+            if 'question' not in row or 'answer' not in row:
+                print(f"Erreur ligne {row_num}: colonnes 'question' ou 'answer' manquantes")
+                print(f"Colonnes disponibles: {list(row.keys())}")
                 continue
+                
+            # Ne pas ignorer si seule la question est vide (peut être une erreur de saisie)
+            if not q and not a:
+                print(f"Ligne {row_num} ignorée: question et answer vides")
+                continue
+                
             tags = (row.get('tags') or '').strip()
             video = (row.get('video_url') or '').strip()
-            self.cards.create(question=q, answer=a, tags=tags, video_url=video)
+            
+            # Créer la carte même si la question est vide (pour debug)
+            card = self.cards.create(question=q, answer=a, tags=tags, video_url=video)
             created += 1
+            
+            # Debug: vérifier que la carte a été créée
+            if row_num <= 5:
+                print(f"Carte créée: id={card.id}, question='{card.question}', answer='{card.answer}'")
+                
+        print(f"Total cartes créées: {created}")
         return created
+
+    def _clean_text(self, text):
+        """Nettoie le texte des caractères problématiques"""
+        if not text:
+            return text
+            
+        # Remplacer les caractères problématiques courants
+        replacements = {
+            '\u2019': "'",  # Apostrophe typographique droite
+            '\u2018': "'",  # Apostrophe typographique gauche
+            '\u201c': '"',  # Guillemet typographique gauche
+            '\u201d': '"',  # Guillemet typographique droite
+            '\u2013': '-',  # Tiret en
+            '\u2014': '--', # Tiret em
+            '\u2026': '...', # Points de suspension
+            '\xa0': ' ',    # Espace insécable
+        }
+        
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+            
+        return text
 
     def clean(self):
         super().clean()
@@ -152,7 +224,6 @@ class FlashcardSetPage(Page):
         super().save(*args, **kwargs)
 
         if do_import:
-            # Relire depuis le début
             f = self.source_file.file
             try:
                 f.seek(0)
@@ -161,7 +232,9 @@ class FlashcardSetPage(Page):
             raw = f.read()
             created = 0
             if strategy == 'replace':
-                self.cards.all().delete()
+                # Supprimer les cartes existantes une par une pour éviter le problème avec FakeQuerySet
+                for card in self.cards.all():
+                    card.delete()
 
             name = (self.source_file.title or "").lower()
             if name.endswith('.txt'):
@@ -169,5 +242,9 @@ class FlashcardSetPage(Page):
             else:
                 created = self._import_from_csv(raw)
 
-            # Reset strategy pour éviter les ré-imports involontaires au prochain save
-            FlashcardSetPage.objects.filter(pk=self.pk).update(import_strategy='append')
+            # Après l'import, passer automatiquement en mode manuel et supprimer le fichier source
+            self.mode_creation = 'manual'
+            self.source_file = None
+            self.import_strategy = 'append'  # Reset la stratégie
+            # Sauvegarder sans déclencher un nouvel import
+            super().save(update_fields=['mode_creation', 'source_file', 'import_strategy'])

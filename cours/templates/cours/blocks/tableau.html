@@ -1,35 +1,38 @@
 {% load wagtailcore_tags %}
 
-<div class="overflow-x-auto mb-6">
-  <table class="min-w-full border border-blue-200 rounded-lg shadow-sm">
-    <thead class="bg-blue-100">
-      <tr>
-        {% for heading in value.headings %}
-          <th class="px-4 py-2 text-left text-sm font-semibold text-blue-900 border-b border-blue-200">
-            {{ heading }}
-          </th>
-        {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in value.rows %}
-        <tr class="{% cycle 'bg-white' 'bg-blue-50' %} hover:bg-blue-100">
-          {% for cell in row %}
-            <td class="px-4 py-2 text-sm text-gray-700 border-b border-blue-200 align-top">
+{# on récupère la structure des lignes — value.data (Wagtail récent) ou value (ancien) #}
+{% with rows=value.data|default:value %}
+  {% if rows %}
+  <div class="w-full mb-6 rounded-lg overflow-hidden ring-1 ring-blue-200 bg-blue-50">
+    <table class="min-w-full border-collapse w-full">
+      <thead class="bg-blue-600">
+        <tr>
+          {% for cell in rows.0 %}
+            <th class="px-4 py-3 text-center text-sm font-semibold text-white border-b border-blue-700">
               {{ cell|richtext }}
-            </td>
+            </th>
           {% endfor %}
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+      </thead>
 
-<!-- Recharge MathJax après insertion -->
+      <tbody>
+        {% for row in rows|slice:"1:" %}
+          <tr class="{% cycle 'bg-blue-100' 'bg-blue-50' %} hover:bg-blue-200">
+            {% for cell in row %}
+              <td class="px-4 py-3 text-sm text-gray-800 text-center border-b border-blue-200 prose max-w-none">
+                {{ cell|richtext }}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+{% endwith %}
+
 <script>
-if (window.MathJax) {
-  MathJax.typesetPromise();
-}
+if (window.MathJax) { MathJax.typesetPromise(); }
 </script>
 
 

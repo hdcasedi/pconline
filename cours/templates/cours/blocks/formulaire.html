@@ -1,0 +1,32 @@
+{% load wagtailcore_tags %}
+
+<section class="rounded-xl p-4 sm:p-6 mb-6 bg-blue-100">
+  <!-- Ligne 1 : plein largeur -->
+  <div class="prose max-w-none mb-6">
+    {{ value.ligne1|richtext }}
+  </div>
+
+  <!-- Ligne 2 : 33% / 67% -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+    <!-- Colonne 33% : formule -->
+    <div class="bg-blue-200 rounded-lg p-4 md:p-6 flex items-center justify-center min-h-[140px]">
+      <div class="text-3xl md:text-4xl font-bold text-blue-900 text-center leading-snug my-0">
+        <!-- On entoure la formule avec $$ ... $$ pour MathJax -->
+        $$ {{ value.formule }} $$
+      </div>
+    </div>
+
+    <!-- Colonne 67% : liste -->
+    <div class="md:col-span-2 bg-blue-100 rounded-lg p-4 md:p-6">
+      <div class="prose max-w-none">
+        {{ value.liste|richtext }}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!--
+  Hypothèse : MathJax est déjà chargé globalement dans base.html.
+  Si besoin, le module TeX est interprété automatiquement.
+-->
+

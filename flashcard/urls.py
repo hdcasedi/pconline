@@ -5,3 +5,7 @@ app_name = 'flashcard'
 urlpatterns = [
     # URLs will be handled by Wagtail
 ]
+
+
+
+

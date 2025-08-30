@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block title %}{{ page.title }} - QCM{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto">
+  <h1 class="text-2xl font-bold text-blue-800 mb-4">{{ page.title }}</h1>
+
+  {% if page.layout == "text_media" and page.image_id %}
+    <!-- 67% texte / 33% média -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <!-- Texte (67%) -->
+      <div class="lg:col-span-2">
+        <div class="prose max-w-none">
+          {{ page.statement|richtext }}
+        </div>
+      </div>
+      <!-- Média (33%) -->
+      <div class="lg:col-span-1">
+        <div class="qcm-media-wrap">
+          {% image page.image original class="qcm-image rounded shadow" alt=page.image.title %}
+        </div>
+        {% if page.video_url %}
+          <div class="mt-4">
+            <a href="{{ page.video_url }}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">
+              📹 Voir la vidéo
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <!-- 100% texte (ou fallback) -->
+    <div class="prose max-w-none mb-6">
+      {{ page.statement|richtext }}
+    </div>
+
+    {% if page.image_id %}
+      <div class="mb-6 qcm-media-wrap">
+        {% image page.image original class="qcm-image rounded shadow" alt=page.image.title %}
+      </div>
+    {% endif %}
+
+    {% if page.video_url %}
+      <div class="mb-6">
+        <a href="{{ page.video_url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+          📹 Voir la vidéo
+        </a>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% if page.layout == "text_media" and not page.image_id %}
+    <div class="qcm-fallback p-3 rounded bg-yellow-50 border border-yellow-200 text-sm">
+      ⚠️ Layout "67% texte / 33% média" sélectionné mais aucune image n'est définie.
+    </div>
+  {% endif %}
+
+  {% comment %}
+    On affiche les options telles qu'elles sont.
+    Si ton modèle a un autre nom de champ que "options", remplace "page.options.all" par le bon nom.
+  {% endcomment %}
+  <div id="qcm-a" class="space-y-3">
+    {% for opt in page.options.all %}
+      <button
+        type="button"
+        class="w-full text-left p-3 rounded border hover:bg-blue-50"
+        data-correct="{{ opt.is_correct|yesno:'1,0' }}"
+        onclick="checkA(this)">
+        <div class="prose max-w-none">
+          {{ opt.text|richtext }}
+        </div>
+      </button>
+    {% empty %}
+      <p class="text-slate-500">Aucune proposition configurée.</p>
+    {% endfor %}
+  </div>
+
+  <div id="feedback" class="mt-4 text-sm font-medium"></div>
+
+  {% if page.explanation %}
+    <div class="p-4 bg-blue-50 rounded-lg border border-blue-200 mt-6">
+      <h3 class="font-semibold text-blue-800 mb-2">Explication :</h3>
+      <div class="prose max-w-none text-sm">
+        {{ page.explanation|richtext }}
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+<style>
+/* Empêche l'image de déborder et gère SVG/original proprement */
+.qcm-media-wrap {
+  width: 100%;
+  max-width: 400px;   /* adapte si tu veux */
+}
+.qcm-media-wrap img, .qcm-media-wrap picture, .qcm-media-wrap svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Correction des puces dans les listes */
+.prose ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin: 1rem 0 !important;
+}
+
+.prose ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin: 1rem 0 !important;
+}
+
+.prose li {
+  margin: 0.5rem 0 !important;
+}
+</style>
+
+<script>
+function checkA(btn) {
+  const correct = btn.dataset.correct === '1';
+  const fb = document.getElementById('feedback');
+  if (correct) {
+    fb.textContent = '✅ Bonne réponse !';
+    fb.className = 'mt-4 text-sm font-medium text-green-700';
+  } else {
+    fb.textContent = '❌ Mauvaise réponse';
+    fb.className = 'mt-4 text-sm font-medium text-red-700';
+  }
+}
+</script>
+{% endblock %}
+
+
+

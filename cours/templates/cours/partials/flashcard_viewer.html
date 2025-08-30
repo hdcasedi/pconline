@@ -2,45 +2,30 @@
 {% load wagtailcore_tags %}
 
 {% with cards=cards|default:page.random_cards10 %}
-<div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-  <!-- Top bar -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-    <div class="flex items-center gap-3">
-      <span class="inline-flex items-center rounded-md bg-white/15 px-2 py-1 text-xs font-medium">
-        Entraînement
-      </span>
-      <div class="text-sm opacity-90">
-        <span id="fc-counter">0 / 0</span>
-      </div>
-    </div>
-    <div class="flex items-center gap-2 text-xs">
-      <span class="inline-flex items-center gap-1 rounded-md bg-emerald-500/25 px-2 py-1">
-        ✅ Justes: <strong id="fc-correct">0</strong>
-      </span>
-      <span class="inline-flex items-center gap-1 rounded-md bg-rose-500/25 px-2 py-1">
-        ❌ Faux: <strong id="fc-wrong">0</strong>
-      </span>
-      <button id="fc-reshuffle" type="button"
-              class="ml-2 inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 hover:bg-white/20">
-        🔀 Mélanger
-      </button>
-    </div>
-  </div>
-
+<div class="h-full flex flex-col">
   <!-- Progress -->
-  <div class="h-1 bg-slate-100">
-    <div id="fc-progress" class="h-1 bg-blue-600 w-0 transition-all duration-300"></div>
+  <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-medium text-slate-600">Progression</span>
+      <span class="text-xs text-slate-500">
+        <span id="fc-counter">0 / 0</span>
+      </span>
+    </div>
+    <div id="fc-progress-container" class="flex gap-0.5 h-2 rounded-full overflow-hidden bg-white border border-slate-200">
+      <!-- Les segments de progression seront générés dynamiquement -->
+    </div>
   </div>
 
   <!-- Card area -->
-  <div class="p-4">
-    <div id="fc-card" class="fc mx-auto max-w-3xl bg-white border border-slate-200 rounded-xl shadow-sm h-64 sm:h-72 lg:h-80 cursor-pointer select-none">
+  <div class="flex-1 p-4 flex flex-col items-center justify-center">
+    <!-- Carte qui occupe 80% de la hauteur -->
+    <div id="fc-card" class="fc w-full max-w-2xl h-4/5 max-h-80 bg-white border border-slate-200 rounded-xl shadow-sm cursor-pointer select-none mb-4">
       <div class="fc-inner w-full h-full">
         <!-- Face question -->
         <div class="fc-face flex flex-col h-full">
-          <!-- En-tête bleu -->
-          <div class="bg-blue-600 text-white px-4 py-3 flex items-center justify-center">
-            <h4 class="text-sm font-semibold uppercase tracking-wide">Question</h4>
+          <!-- En-tête Question -->
+          <div class="bg-blue-600 text-white text-center py-2 px-4 rounded-t-xl">
+            <span class="font-semibold text-sm">Question</span>
           </div>
           <!-- Contenu centré -->
           <div class="flex-1 flex items-center justify-center p-5">
@@ -49,9 +34,9 @@
         </div>
         <!-- Face réponse -->
         <div class="fc-face fc-back flex flex-col h-full">
-          <!-- En-tête vert -->
-          <div class="bg-emerald-600 text-white px-4 py-3 flex items-center justify-center">
-            <h4 class="text-sm font-semibold uppercase tracking-wide">Réponse</h4>
+          <!-- En-tête Réponse -->
+          <div class="bg-green-500 text-white text-center py-2 px-4 rounded-t-xl">
+            <span class="font-semibold text-sm">Réponse</span>
           </div>
           <!-- Contenu centré -->
           <div class="flex-1 flex items-center justify-center p-5">
@@ -61,28 +46,15 @@
       </div>
     </div>
 
-    <!-- Controls -->
-    <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
-      <button id="fc-show" type="button"
-              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">
-        👀 Voir la réponse (Espace)
-      </button>
+    <!-- Boutons Juste/Faux -->
+    <div class="flex gap-4">
       <button id="fc-wrong-btn" type="button"
-              class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700">
-        ❌ Faux (F)
+              class="rounded-lg bg-red-600 px-6 py-3 text-sm font-medium text-white hover:bg-red-700 transition-colors">
+        ❌ Faux
       </button>
       <button id="fc-correct-btn" type="button"
-              class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-        ✅ Juste (J)
-      </button>
-      <div class="mx-2 hidden sm:block w-px h-6 bg-slate-200"></div>
-      <button id="fc-prev" type="button"
-              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50">
-        ← Précédent (P)
-      </button>
-      <button id="fc-next" type="button"
-              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50">
-        Suivant → (N)
+              class="rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white hover:bg-green-700 transition-colors">
+        ✅ Juste
       </button>
     </div>
   </div>
@@ -98,6 +70,18 @@
       <div class="flash-item"><div class="q"><p>Aucune carte.</p></div><div class="a"><p>—</p></div></div>
     {% endfor %}
   </div>
+
+  <!-- Popup de fin -->
+  <div id="fc-end-popup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md mx-4 text-center">
+      <div class="text-6xl mb-4">🎉</div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Bravo !</h2>
+      <p class="text-lg text-gray-600 mb-6">Vous avez eu <span id="fc-final-score" class="font-bold text-blue-600">0/0</span></p>
+      <button id="fc-restart-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+        🔄 Recommencer une nouvelle série
+      </button>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -108,6 +92,31 @@
 .fc-face { position: absolute; inset: 0; backface-visibility: hidden; }
 .fc-back { transform: rotateY(180deg); }
 .prose :where(pre, code){ white-space: pre-wrap; }
+
+/* Styles pour les questions et réponses */
+#fc-q {
+  color: #374151 !important; /* gris foncé pour le contenu */
+}
+
+#fc-a {
+  color: #374151 !important; /* gris foncé pour le contenu */
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  #fc-card {
+    max-width: 100%;
+    height: 60vh;
+  }
+}
+
+/* Desktop adjustments */
+@media (min-width: 641px) {
+  #fc-card {
+    max-width: 600px;
+    height: 400px;
+  }
+}
 </style>
 
 <script>
@@ -133,28 +142,69 @@
 
   // state
   let idx = 0, total = items.length, correct = 0, wrong = 0;
+  let questionStatus = []; // 0=pas répondu, 1=juste, 2=faux, 3=en cours, 4=pas noté
 
   // els
   const card = $("#fc-card");
   const qEl = $("#fc-q");
   const aEl = $("#fc-a");
   const counter = $("#fc-counter");
-  const progress = $("#fc-progress");
-  const showBtn = $("#fc-show");
+  const progressContainer = $("#fc-progress-container");
   const okBtn = $("#fc-correct-btn");
   const koBtn = $("#fc-wrong-btn");
-  const prevBtn = $("#fc-prev");
-  const nextBtn = $("#fc-next");
-  const reshuffleBtn = $("#fc-reshuffle");
-  const okCount = $("#fc-correct");
-  const koCount = $("#fc-wrong");
+  const endPopup = $("#fc-end-popup");
+  const finalScore = $("#fc-final-score");
+  const restartBtn = $("#fc-restart-btn");
+
+  function createProgressBar() {
+    progressContainer.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+      const segment = document.createElement('div');
+      segment.className = 'flex-1 transition-colors duration-200';
+      segment.dataset.index = i;
+      progressContainer.appendChild(segment);
+    }
+  }
+
+  function updateProgressBar() {
+    const segments = progressContainer.children;
+    for (let i = 0; i < total; i++) {
+      const segment = segments[i];
+      const status = questionStatus[i] || 0;
+      
+      // Supprimer toutes les classes de couleur
+      segment.className = 'flex-1 transition-colors duration-200';
+      
+      // Ajouter la classe de couleur selon le statut
+      switch(status) {
+        case 1: // Juste
+          segment.classList.add('bg-emerald-500');
+          break;
+        case 2: // Faux
+          segment.classList.add('bg-rose-500');
+          break;
+        case 3: // En cours
+          segment.classList.add('bg-blue-500');
+          break;
+        case 4: // Pas noté
+          segment.classList.add('bg-slate-400');
+          break;
+        default: // Pas répondu
+          segment.classList.add('bg-white', 'border-r', 'border-slate-300');
+          if (i === total - 1) segment.classList.remove('border-r');
+          break;
+      }
+    }
+  }
 
   function setProgress(){
-    const pct = total ? Math.min(100, Math.round(((idx+1)/total)*100)) : 0;
-    progress.style.width = pct+"%";
     counter.textContent = (total? (idx+1):0) + " / " + total;
-    okCount.textContent = correct;
-    koCount.textContent = wrong;
+    
+    // Marquer la question actuelle comme "en cours"
+    if (total > 0) {
+      questionStatus[idx] = 3;
+      updateProgressBar();
+    }
   }
 
   function typesetMath(scope){
@@ -186,6 +236,35 @@
   function next(){
     if (!total) return;
     idx = (idx+1) % total;
+    
+    // Vérifier si on a terminé toutes les questions
+    if (idx === 0) {
+      showEndPopup();
+    } else {
+      render();
+    }
+  }
+
+  function showEndPopup() {
+    finalScore.textContent = `${correct}/${total}`;
+    endPopup.classList.remove('hidden');
+  }
+
+  function restart() {
+    // Réinitialiser les compteurs
+    correct = 0;
+    wrong = 0;
+    idx = 0;
+    questionStatus = [];
+    
+    // Mélanger les cartes
+    shuffle(items);
+    
+    // Recréer la barre de progression
+    createProgressBar();
+    
+    // Cacher la popup et re-rendre
+    endPopup.classList.add('hidden');
     render();
   }
 
@@ -197,14 +276,17 @@
 
   // events
   card.addEventListener("click", flip);
-  showBtn.addEventListener("click", flip);
-  nextBtn.addEventListener("click", next);
-  prevBtn.addEventListener("click", prev);
-  okBtn.addEventListener("click", () => { correct++; next(); });
-  koBtn.addEventListener("click", () => { wrong++; next(); });
-  reshuffleBtn.addEventListener("click", () => {
-    shuffle(items); idx = 0; correct = 0; wrong = 0; render();
+  okBtn.addEventListener("click", () => { 
+    correct++; 
+    questionStatus[idx] = 1; // Marquer comme juste
+    next(); 
   });
+  koBtn.addEventListener("click", () => { 
+    wrong++; 
+    questionStatus[idx] = 2; // Marquer comme faux
+    next(); 
+  });
+  restartBtn.addEventListener("click", restart);
 
   // keyboard
   document.addEventListener("keydown", (e) => {
@@ -212,12 +294,21 @@
     if (k === " "){ e.preventDefault(); flip(); }
     else if (k === "n"){ next(); }
     else if (k === "p"){ prev(); }
-    else if (k === "j"){ correct++; next(); }
-    else if (k === "f"){ wrong++; next(); }
+    else if (k === "j"){ 
+      correct++; 
+      questionStatus[idx] = 1; // Marquer comme juste
+      next(); 
+    }
+    else if (k === "f"){ 
+      wrong++; 
+      questionStatus[idx] = 2; // Marquer comme faux
+      next(); 
+    }
   });
 
   // init
   shuffle(items); // tirage au hasard initial
+  createProgressBar();
   render();
 })();
 </script>

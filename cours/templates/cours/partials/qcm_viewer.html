@@ -1,0 +1,478 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+
+<div id="qcm-root" class="h-full flex flex-col">
+  <!-- Progress -->
+  <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-medium text-slate-600">Progression</span>
+      <span class="text-xs text-slate-500">
+        <span id="qcm-counter">0 / 0</span>
+      </span>
+    </div>
+    <div id="qcm-progress-container" class="flex gap-0.5 h-2 rounded-full overflow-hidden bg-white border border-slate-200">
+      {% for _ in qcm_set %}
+        <div class="qcm-seg flex-1 transition-colors duration-200" data-idx="{{ forloop.counter0 }}"></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Zone question -->
+  <div id="qcm-stage" class="flex-1 p-4">
+    {% for q in qcm_set %}
+      <div class="qcm-card {% if not forloop.first %}hidden{% endif %} h-full" data-idx="{{ forloop.counter0 }}">
+
+        {% if q.image %}
+          <!-- Layout avec image à droite -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-4">
+            <!-- Texte (67%) -->
+            <div class="lg:col-span-2">
+              <div class="prose max-w-none">
+                {{ q.statement|richtext }}
+              </div>
+            </div>
+            <!-- Image (33%) -->
+            <div class="lg:col-span-1">
+              <div class="qcm-media-wrap">
+                {% image q.image original class="qcm-image rounded shadow cursor-pointer" alt=q.image.title %}
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <!-- Layout texte seulement -->
+          <div class="prose max-w-none mb-4">
+            {{ q.statement|richtext }}
+          </div>
+        {% endif %}
+
+        <div class="qcm-options space-y-2">
+          {% for opt in q.options %}
+            <button type="button"
+                    class="qcm-opt w-full text-left p-3 rounded border border-slate-200 hover:bg-blue-50"
+                    data-correct="{{ opt.is_correct|yesno:'1,0' }}">
+              <div class="prose max-w-none">
+                {{ opt.html|richtext }}
+              </div>
+            </button>
+          {% endfor %}
+        </div>
+
+        {% if q.explanation %}
+          <div class="qcm-expl hidden mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div class="prose max-w-none text-blue-900">
+              {{ q.explanation|richtext }}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Zone bouton et explication -->
+  <div class="p-4">
+    <div class="flex gap-4 items-start">
+      <!-- Bouton (taille fixe, centré vers le haut) -->
+      <div class="flex-shrink-0">
+        <button id="qcm-action" type="button" class="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium">
+          Choisir une réponse
+        </button>
+      </div>
+      <!-- Explication (prend le reste de l'espace) -->
+      <div id="qcm-explanation-area" class="flex-1 hidden">
+        <div class="p-4 rounded-lg bg-blue-50 border border-blue-200">
+          <div id="qcm-explanation-content" class="prose max-w-none text-blue-900">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup pour les images -->
+<div id="image-popup" class="image-popup">
+  <img id="popup-image" src="" alt="">
+</div>
+
+<!-- Popup de fin -->
+<div id="qcm-end-popup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-xl p-6 max-w-md mx-4 text-center">
+    <div class="text-6xl mb-4">🎉</div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">Bravo !</h2>
+    <p class="text-lg text-gray-600 mb-6">Vous avez eu <span id="qcm-final-score" class="font-bold text-blue-600">0/0</span></p>
+    <button id="qcm-restart-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+      🔄 Recommencer une nouvelle série
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const root = document.getElementById('qcm-root');
+  if (!root) return;
+
+  const cards = Array.from(root.querySelectorAll('.qcm-card'));
+  const total = cards.length;
+
+  const segs = Array.from(root.querySelectorAll('.qcm-seg'));
+  const counter = root.querySelector('#qcm-counter');
+  const actionBtn = root.querySelector('#qcm-action');
+  const endPopup = document.querySelector('#qcm-end-popup');
+  const finalScore = document.querySelector('#qcm-final-score');
+  const restartBtn = document.querySelector('#qcm-restart-btn');
+  const explanationArea = document.querySelector('#qcm-explanation-area');
+  const explanationContent = document.querySelector('#qcm-explanation-content');
+
+  counter.textContent = `1 / ${total}`;
+
+  // État
+  let order = cards.map((_, i) => i);
+  let current = 0; // index dans "order"
+  let score = 0;
+  let finished = false;
+
+  const selected = new Array(total).fill(null);   // index DOM de l'option choisie
+  const validated = new Array(total).fill(false);
+  const correct = new Array(total).fill(false);
+
+  // Utils
+  function shuffleArray(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+  }
+  function shuffleChildren(container) {
+    const arr = Array.from(container.children);
+    shuffleArray(arr);
+    arr.forEach(c => container.appendChild(c));
+  }
+
+  // Mélanger les options de chaque carte au chargement
+  cards.forEach(card => {
+    const wrap = card.querySelector('.qcm-options');
+    if (wrap) shuffleChildren(wrap);
+  });
+
+  function setSeg(idxReal, state) {
+    // state: 'idle' | 'good' | 'bad' | 'active'
+    if (idxReal < 0 || idxReal >= segs.length) return;
+    
+    const seg = segs[idxReal];
+    seg.className = 'qcm-seg flex-1 transition-colors duration-200'; // reset
+    if (state === 'good') {
+      seg.classList.add('bg-emerald-500');
+    } else if (state === 'bad') {
+      seg.classList.add('bg-rose-500');
+    } else if (state === 'active') {
+      seg.classList.add('bg-blue-500');
+    } else {
+      seg.classList.add('bg-white', 'border-r', 'border-slate-300');
+    }
+  }
+
+  function refreshSegs() {
+    for (let i = 0; i < total; i++) {
+      if (validated[i]) {
+        setSeg(i, correct[i] ? 'good' : 'bad');
+      } else if (i === order[current] && !finished) {
+        setSeg(i, 'active');
+      } else {
+        setSeg(i, 'idle');
+      }
+    }
+  }
+
+  function showCardAt(idxInOrder) {
+    cards.forEach(c => c.classList.add('hidden'));
+    const realIdx = order[idxInOrder];
+    const card = cards[realIdx];
+    card.classList.remove('hidden');
+
+    // Mettre à jour l'apparence des options
+    const opts = Array.from(card.querySelectorAll('.qcm-opt'));
+    if (!validated[realIdx]) {
+      opts.forEach((o, i) => {
+        o.disabled = false;
+        o.classList.remove('ring-2','ring-blue-300','bg-blue-50',
+                           'border-green-500','bg-green-50',
+                           'border-red-500','bg-red-50');
+        if (selected[realIdx] === i) {
+          o.classList.add('ring-2','ring-blue-300','bg-blue-50');
+        }
+      });
+    } else {
+      // déjà validée : laisser le vert/rouge et désactiver
+      opts.forEach(o => { o.disabled = true; });
+    }
+
+    // Bouton central
+    if (finished) {
+      actionBtn.textContent = 'Terminer';
+    } else if (validated[realIdx]) {
+      actionBtn.textContent = current === total - 1 ? 'Mes résultats' : 'Suivant';
+    } else {
+      actionBtn.textContent = 'Suivant';
+    }
+
+    // Mettre à jour le compteur
+    counter.textContent = `${current + 1} / ${total}`;
+
+    // Cacher l'explication si la question n'est pas validée
+    if (!validated[realIdx]) {
+      explanationArea.classList.add('hidden');
+    }
+
+    refreshSegs();
+  }
+
+
+
+
+
+  function showEndPopup() {
+    finished = true;
+    finalScore.textContent = `${score}/${total}`;
+    endPopup.classList.remove('hidden');
+  }
+
+  function restart() {
+    // Obtenir l'ID du cours depuis l'URL ou un attribut data
+    const coursId = document.querySelector('[data-cours-id]')?.dataset.coursId || 
+                   window.location.pathname.split('/').filter(Boolean).pop();
+    
+    // Faire une requête AJAX pour obtenir de nouvelles questions
+    fetch(`/cours/qcm/new-questions/${coursId}/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Remplacer le contenu du QCM avec les nouvelles questions
+          const qcmRoot = document.getElementById('qcm-root');
+          qcmRoot.innerHTML = data.html;
+          
+          // Réinitialiser complètement l'état
+          score = 0;
+          finished = false;
+          selected.fill(null);
+          validated.fill(false);
+          correct.fill(false);
+          current = 0;
+          
+          // Récupérer les nouveaux éléments
+          const newCards = Array.from(qcmRoot.querySelectorAll('.qcm-card'));
+          const newSegs = Array.from(qcmRoot.querySelectorAll('.qcm-seg'));
+          const newCounter = qcmRoot.querySelector('#qcm-counter');
+          const newActionBtn = qcmRoot.querySelector('#qcm-action');
+          
+          // Mettre à jour les références
+          cards.length = 0;
+          cards.push(...newCards);
+          segs.length = 0;
+          segs.push(...newSegs);
+          counter = newCounter;
+          actionBtn = newActionBtn;
+          total = cards.length;
+          
+          // Réinitialiser l'ordre
+          order = cards.map((_, i) => i);
+          shuffleArray(order);
+          
+          // Mélanger les options de chaque carte
+          cards.forEach(card => {
+            const wrap = card.querySelector('.qcm-options');
+            if (wrap) shuffleChildren(wrap);
+          });
+          
+          // Réinitialiser la barre de progression
+          segs.forEach((seg, i) => {
+            seg.className = 'qcm-seg flex-1 transition-colors duration-200';
+            seg.classList.add('bg-white', 'border-r', 'border-slate-300');
+          });
+          
+          // Marquer la première question comme active
+          setSeg(order[current], 'active');
+          
+          // Mettre à jour le compteur
+          counter.textContent = `1 / ${total}`;
+          
+          // Afficher la première carte
+          showCardAt(current);
+          
+          // Cacher la popup de fin
+          endPopup.classList.add('hidden');
+          
+          // Réattacher les événements aux nouvelles options
+          attachEventListeners();
+        } else {
+          console.error('Erreur lors du rechargement du QCM:', data.error);
+          // En cas d'erreur, recharger la page complète
+          window.location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Erreur lors du rechargement du QCM:', error);
+        // En cas d'erreur, recharger la page complète
+        window.location.reload();
+      });
+  }
+
+  function attachEventListeners() {
+    // Sélection option - Réponse immédiate
+    cards.forEach((card, realIdx) => {
+      const opts = Array.from(card.querySelectorAll('.qcm-opt'));
+      const expl = card.querySelector('.qcm-expl');
+      opts.forEach((opt, i) => {
+        opt.addEventListener('click', () => {
+          if (validated[realIdx] || finished) return;
+          
+          // Valider immédiatement la réponse
+          selected[realIdx] = i;
+          validated[realIdx] = true;
+
+          // Afficher les résultats (vert/rouge)
+          opts.forEach((o, j) => {
+            o.disabled = true;
+            o.classList.remove('ring-2','ring-blue-300','bg-blue-50');
+          });
+
+          // Marquer la réponse choisie
+          if (opts[i].dataset.correct === '1') {
+            // Bonne réponse choisie
+            opts[i].classList.add('border-green-500','bg-green-50');
+          } else {
+            // Mauvaise réponse choisie
+            opts[i].classList.add('border-red-500','bg-red-50');
+            // Montrer la bonne réponse en vert
+            opts.forEach((o, j) => {
+              if (o.dataset.correct === '1') {
+                o.classList.add('border-green-500','bg-green-50');
+              }
+            });
+          }
+
+          // Marquer comme correct si bonne réponse
+          if (opts[i].dataset.correct === '1') {
+            correct[realIdx] = true;
+            score += 1;
+          }
+
+          // Afficher l'explication dans la zone dédiée
+          if (expl) {
+            explanationContent.innerHTML = expl.innerHTML;
+            explanationArea.classList.remove('hidden');
+          }
+
+          // Mettre à jour la barre de progression immédiatement
+          refreshSegs();
+          
+          // Mettre à jour le bouton
+          showCardAt(current);
+        });
+      });
+    });
+
+    // Bouton central: Suivant / Résultat
+    actionBtn.addEventListener('click', () => {
+      if (finished) {
+        return; // Ne rien faire si terminé
+      }
+
+      // SUIVANT (si question validée)
+      const realIdx = order[current];
+      if (validated[realIdx]) {
+        if (current === total - 1) {
+          // Dernière question validée : afficher le résultat
+          showEndPopup();
+        } else {
+          // Question suivante
+          current += 1;
+          showCardAt(current);
+        }
+      }
+    });
+  }
+
+  // Attacher les événements initialement
+  attachEventListeners();
+
+  // Bouton de redémarrage
+  restartBtn.addEventListener('click', restart);
+
+
+
+  // Gestion de la popup d'image
+  const imagePopup = document.getElementById('image-popup');
+  const popupImage = document.getElementById('popup-image');
+  
+  // Clic sur une image pour l'agrandir
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('qcm-image')) {
+      popupImage.src = e.target.src;
+      popupImage.alt = e.target.alt;
+      imagePopup.style.display = 'flex';
+    }
+  });
+  
+  // Clic sur la popup pour la fermer
+  imagePopup.addEventListener('click', () => {
+    imagePopup.style.display = 'none';
+  });
+
+  // Init
+  refreshSegs();
+  showCardAt(current);
+})();
+</script>
+
+<style>
+/* Empêche l'image de déborder et gère SVG/original proprement */
+.qcm-media-wrap {
+  width: 100%;
+  max-width: 300px;   /* réduit la largeur */
+}
+.qcm-media-wrap img, .qcm-media-wrap picture, .qcm-media-wrap svg {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;  /* limite la hauteur */
+  height: auto;
+  object-fit: contain;
+}
+
+/* Popup pour l'image */
+.image-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  cursor: pointer;
+}
+
+.image-popup img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Correction des puces dans les listes */
+.prose ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin: 1rem 0 !important;
+}
+
+.prose ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin: 1rem 0 !important;
+}
+
+.prose li {
+  margin: 0.5rem 0 !important;
+}
+</style>

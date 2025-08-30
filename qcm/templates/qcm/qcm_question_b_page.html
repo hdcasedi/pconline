@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block title %}{{ page.title }} - QCM{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto">
+  <h1 class="text-2xl font-bold text-blue-800 mb-4">{{ page.title }}</h1>
+
+  {% comment %}
+    Note: Le type B n'a pas de layout 67/33 car c'est une banque de variantes
+    Chaque variante peut avoir son propre layout, mais l'affichage ici est simplifié
+  {% endcomment %}
+  <div class="prose max-w-none mb-6">
+    {{ page.statement|richtext }}
+  </div>
+
+  {% comment %}
+    Idéalement, le contexte fournit "choices" (4 réponses mélangées) avec
+    pour chacune: .html (richtext) et .is_correct (booléen).
+    Si tu n'as pas encore ce get_context, on affiche au moins la bonne réponse.
+  {% endcomment %}
+
+  {% if choices %}
+    <div id="qcm-b" class="space-y-3">
+      {% for c in choices %}
+        <button
+          type="button"
+          class="w-full text-left p-3 rounded border hover:bg-blue-50"
+          data-correct="{{ c.is_correct|yesno:'1,0' }}"
+          onclick="checkB(this)">
+          <div class="prose max-w-none">
+            {{ c.html|richtext }}
+          </div>
+        </button>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="p-3 rounded border bg-yellow-50">
+      <p class="mb-2 text-sm text-yellow-800">
+        (Configuration minimale) Aucune liste de choix fournie. Voici la bonne réponse :
+      </p>
+      <div class="prose max-w-none">
+        {{ page.correct_answer|richtext }}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Debug info pour Type B -->
+  <div class="qcm-debug mt-4">
+    Type B - Variantes disponibles: {{ page.variants.count }}
+  </div>
+
+  <div id="feedback-b" class="mt-4 text-sm font-medium"></div>
+</section>
+
+<style>
+/* Correction des puces dans les listes */
+.prose ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin: 1rem 0 !important;
+}
+
+.prose ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin: 1rem 0 !important;
+}
+
+.prose li {
+  margin: 0.5rem 0 !important;
+}
+</style>
+
+<script>
+function checkB(btn) {
+  const correct = btn.dataset.correct === '1';
+  const fb = document.getElementById('feedback-b');
+  if (correct) {
+    fb.textContent = '✅ Bonne réponse !';
+    fb.className = 'mt-4 text-sm font-medium text-green-700';
+  } else {
+    fb.textContent = '❌ Mauvaise réponse';
+    fb.className = 'mt-4 text-sm font-medium text-red-700';
+  }
+}
+</script>
+{% endblock %}
+
+
+
