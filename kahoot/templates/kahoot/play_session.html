@@ -1,0 +1,770 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Quiz en cours - QuizzUp{% endblock %}
+
+{% block content %}
+<style>
+    /* États */
+    .qopt-container--selected { outline: none; box-shadow: 0 0 0 2px rgb(96 165 250); } /* ring-blue-400 */
+    .qopt-container--correct .qopt-body { border-color: rgb(34 197 94); background: rgb(240 253 244); } /* border-green-500 + bg-green-50 */
+
+    /* Sécurité prose (évite débordements) */
+    .qopt-container .prose p, .qopt-container .prose li { margin: .25rem 0; }
+    .qopt-container img { display:block; max-width:100%; height:auto; }
+    
+    /* Hover effects */
+    .qopt-container:hover { transform: translateY(-1px); transition: transform 0.2s; }
+</style>
+
+<div class="max-w-6xl mx-auto">
+    <!-- En-tête avec progression -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl font-bold text-blue-600">Quiz en cours</h1>
+                <div class="flex items-center space-x-2">
+                    <div class="w-32 bg-gray-200 rounded-full h-2">
+                        <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <span class="text-sm text-gray-600" id="progressText">0/0</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span id="timer" class="text-xl font-bold text-red-600">--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone de contenu dynamique -->
+    <div id="contentZone">
+        <!-- Le contenu sera chargé dynamiquement -->
+        <div class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Chargement du quiz...</p>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+// Variables globales
+const sessionCode = '{{ session.short_code }}';
+let timerInterval;
+let timeLeft = 0;
+let questionAnswered = false;
+
+// Éléments DOM
+const timerElement = document.getElementById('timer');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const contentZone = document.getElementById('contentZone');
+
+// Polling pour récupérer l'état du quiz
+let gamePolling = setInterval(async () => {
+    try {
+        const response = await fetch(`/kahoot/api/state/${sessionCode}/`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateDisplay(data);
+        }
+    } catch (error) {
+        console.error('Erreur lors du polling:', error);
+    }
+}, 2000);
+
+let currentQuestionId = null;
+
+function updateDisplay(data) {
+    // Debug: afficher les informations importantes
+    console.log('🔄 updateDisplay appelé avec:', {
+        phase: data.phase,
+        current_phase: data.current_phase,
+        answers_revealed: data.answers_revealed,
+        has_question: !!data.question,
+        has_stats: !!data.answer_stats
+    });
+    
+    // Mettre à jour la progression
+    const progress = data.current_question_index + 1;
+    const total = data.total_questions;
+    const percentage = total > 0 ? (progress / total) * 100 : 0;
+    
+    progressBar.style.width = percentage + '%';
+    progressText.textContent = `${progress}/${total}`;
+    
+    if (data.phase === 'waiting') {
+        contentZone.innerHTML = `
+            <div class="text-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-gray-600">En attente du début du quiz...</p>
+            </div>
+        `;
+        currentQuestionId = null;
+    } else if (data.phase === 'playing') {
+        if (data.question) {
+            // Sauvegarder les statistiques si disponibles
+            if (data.answer_stats) {
+                window.currentAnswerStats = data.answer_stats;
+            }
+            
+            // Ne recharger la question que si elle a changé ou si la phase a changé
+            const questionKey = `${data.question.qid}-${data.current_phase}-${data.answers_revealed}`;
+            if (currentQuestionId !== questionKey) {
+                displayQuestion(data.question, data.current_phase, data);
+                currentQuestionId = questionKey;
+            }
+        } else {
+            // Quiz démarré mais pas encore de question affichée
+            contentZone.innerHTML = `
+                <div class="text-center py-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Quiz démarré !</h2>
+                    <p class="text-gray-600 mb-6">Prêt à afficher la première question</p>
+                    <button onclick="startQuestionPhase()" 
+                            class="bg-green-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        Démarrer la première question
+                    </button>
+                </div>
+            `;
+        }
+    } else if (data.phase === 'finished') {
+        displayFinalPodium(data);
+        currentQuestionId = null;
+    }
+}
+
+function displayQuestion(question, currentPhase = 'answers', sessionData = null) {
+    let content = '';
+    
+    if (currentPhase === 'question') {
+        // Phase 1: Question seulement (10 secondes)
+        content = `
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="mb-4">
+                    <span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        Question ${question.qid + 1}
+                    </span>
+                    ${question.media.image_url ? `
+                        <span class="inline-block bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded ml-2">
+                            TEXTE ET IMAGE
+                        </span>
+                    ` : ''}
+                </div>
+                
+                <div class="text-center">
+                    <div class="prose max-w-none text-xl mathjax-content mb-6" id="questionContent">
+                        ${question.statement_html}
+                    </div>
+                    
+                    ${question.media.image_url ? `
+                        <div class="mt-6">
+                            <img src="${question.media.image_url}" alt="Question" class="max-w-md mx-auto h-auto rounded">
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <button id="startAnswersBtn" 
+                        class="bg-green-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        onclick="startAnswersPhase()">
+                    Afficher les réponses
+                </button>
+            </div>
+        `;
+    } else if (currentPhase === 'answers' || currentPhase === 'results') {
+        // Phase 2: Question + réponses (fusionnée avec résultats)
+        // Phase 3: Résultats avec statistiques (quand answers_revealed = true)
+        let timerDisplay = '';
+        if (question.timer && sessionData && !sessionData.answers_revealed) {
+            timerDisplay = `
+                <div class="mb-4">
+                    <div class="bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-1000" id="questionTimerBar"></div>
+                    </div>
+                    <div class="text-center text-sm text-gray-600 mt-2">
+                        <span id="questionTimerText">${question.timer}s</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        const stats = sessionData && sessionData.answers_revealed ? (window.currentAnswerStats || {}) : {};
+        
+        content = `
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="mb-4">
+                    <span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        Question ${question.qid + 1}
+                    </span>
+                    ${question.media.image_url ? `
+                        <span class="inline-block bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded ml-2">
+                            TEXTE ET IMAGE
+                        </span>
+                    ` : ''}
+                </div>
+                ${timerDisplay}
+                
+                <!-- Question texte + image sur la même ligne -->
+                <div class="flex items-start gap-6 mb-6">
+                    <div class="flex-1 prose max-w-none mathjax-content" id="questionContent">
+                        ${question.statement_html}
+                    </div>
+                    ${question.media.image_url ? `
+                        <div class="w-1/3 flex-shrink-0">
+                            <img src="${question.media.image_url}" alt="Question" class="w-full h-auto rounded" id="questionImage">
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <!-- Options de réponse (2 par ligne) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="optionsContainer">
+                            ${question.options.map((option, index) => {
+                                const optionId = `o${index + 1}`;
+                                const stat = stats[optionId] || { count: 0, percentage: 0 };
+                                const isCorrect = option.is_correct;
+                                const isRevealed = sessionData && sessionData.answers_revealed;
+                                
+                                return `
+                                    <div class="qopt-container" data-option-id="${option.id}" data-correct="${option.is_correct ? '1' : '0'}">
+                                        <!-- Tuile image + proposition collées -->
+                                        <div class="flex items-stretch">
+                                            <!-- Tuile image carrée arrondie à gauche -->
+                                            <div class="qopt-tile w-16 h-16 shrink-0 overflow-hidden">
+                                                ${option.badge_url ? `
+                                                    <img src="${option.badge_url}" alt="${option.badge}" class="w-full h-full object-cover rounded-l-xl" />
+                                                ` : `
+                                                    <div class="w-full h-full bg-gray-100 rounded-l-xl flex items-center justify-center">
+                                                        <span class="text-gray-700 text-lg font-semibold">${option.badge}</span>
+                                                    </div>
+                                                `}
+                                            </div>
+                                            
+                                            <!-- Proposition à droite (arrondi à droite) -->
+                                            <div class="qopt-body flex-1 bg-white border border-slate-300 rounded-r-xl p-4 flex items-center ${isRevealed && isCorrect ? 'bg-green-50 border-green-300' : ''} ${isRevealed ? 'justify-between' : ''}">
+                                                <div class="prose max-w-none text-slate-900 mathjax-content">
+                                                    ${option.html}
+                                                </div>
+                                                ${isRevealed ? `
+                                                    <div class="text-sm font-medium text-gray-600 ml-4">
+                                                        ${stat.count} vote${stat.count > 1 ? 's' : ''} (${stat.percentage}%)
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                ${sessionData && sessionData.answers_revealed ? `
+                    <button id="nextBtn" 
+                            class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onclick="nextQuestion()">
+                        ${question.qid + 1 >= sessionData.total_questions ? 'Voir les résultats' : 'Question suivante'}
+                    </button>
+                ` : `
+                    <button id="revealBtn" 
+                            class="bg-orange-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            onclick="revealAnswers()">
+                        Révéler les réponses
+                    </button>
+                `}
+            </div>
+        `;
+        
+        // Ajouter les événements de clic sur les options
+        setTimeout(() => {
+            document.querySelectorAll('.qopt-container').forEach(option => {
+                option.addEventListener('click', function() {
+                    const optionId = this.getAttribute('data-option-id');
+                    selectOption(optionId);
+                });
+            });
+        }, 100);
+    }
+    
+    contentZone.innerHTML = content;
+    
+    // Rendre MathJax après l'insertion du contenu
+    setTimeout(() => {
+        forceMathJaxRender();
+    }, 200);
+    
+    // Ajuster la hauteur des options en fonction de l'image
+    setTimeout(() => {
+        adjustOptionsHeight();
+    }, 300);
+    
+    // Démarrer le timer si activé et en phase réponses
+    if (question.timer && currentPhase === 'answers') {
+        startQuestionTimer(question.timer);
+    }
+}
+
+function startQuestionTimer(duration) {
+    timeLeft = duration;
+    const timerBar = document.getElementById('questionTimerBar');
+    const timerText = document.getElementById('questionTimerText');
+    
+    // Arrêter le timer précédent s'il existe
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
+    // Mettre à jour l'affichage initial
+    if (timerBar) timerBar.style.width = '100%';
+    if (timerText) timerText.textContent = timeLeft + 's';
+    
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        const percentage = (timeLeft / duration) * 100;
+        
+        if (timerBar) timerBar.style.width = percentage + '%';
+        if (timerText) timerText.textContent = timeLeft + 's';
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            // Auto-révéler les réponses après le temps
+            revealAnswers();
+        }
+    }, 1000);
+}
+
+function revealAnswers() {
+    // Révéler les bonnes réponses
+    fetch(`/kahoot/api/host/reveal/${sessionCode}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    }).catch(error => console.error('Erreur révélation:', error));
+}
+
+async function startQuestionPhase() {
+    try {
+        const response = await fetch(`/kahoot/api/host/start-question/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                // La phase question s'affichera automatiquement via le polling
+                console.log('Phase question démarrée');
+            }
+        } else {
+            const data = await response.json();
+            alert('Erreur: ' + (data.error || 'Impossible de démarrer la phase question'));
+        }
+    } catch (error) {
+        alert('Erreur de connexion');
+    }
+}
+
+async function startAnswersPhase() {
+    try {
+        const response = await fetch(`/kahoot/api/host/start-answers/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                // La phase réponses s'affichera automatiquement via le polling
+                console.log('Phase réponses démarrée');
+            }
+        } else {
+            const data = await response.json();
+            alert('Erreur: ' + (data.error || 'Impossible de démarrer la phase réponses'));
+        }
+    } catch (error) {
+        alert('Erreur de connexion');
+    }
+}
+
+async function revealAnswers() {
+    try {
+        const response = await fetch(`/kahoot/api/host/reveal/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                // Les résultats s'afficheront automatiquement via le polling
+                console.log('Réponses révélées');
+            }
+        } else {
+            const data = await response.json();
+            alert('Erreur: ' + (data.error || 'Impossible de révéler les réponses'));
+        }
+    } catch (error) {
+        alert('Erreur de connexion');
+    }
+}
+
+async function nextQuestion() {
+    try {
+        const nextBtn = document.getElementById('nextBtn');
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.textContent = 'Chargement...';
+        }
+        
+        const response = await fetch(`/kahoot/api/host/next/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.finished) {
+                // Quiz terminé
+                displayFinalPodium(data.state);
+            } else {
+                // Question suivante - la prochaine question s'affichera automatiquement via le polling
+                if (nextBtn) {
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = 'Question suivante';
+                }
+            }
+        } else {
+            const data = await response.json();
+            alert('Erreur: ' + (data.error || 'Impossible de passer à la question suivante'));
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.textContent = 'Question suivante';
+            }
+        }
+    } catch (error) {
+        alert('Erreur de connexion');
+        const nextBtn = document.getElementById('nextBtn');
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.textContent = 'Question suivante';
+        }
+    }
+}
+
+function displayFinalPodium(data) {
+    // Trier les participants par score
+    const sortedParticipants = Object.entries(data.participant_scores || {})
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 6);
+    
+    contentZone.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Titre à gauche -->
+            <div class="flex items-center justify-center">
+                <div class="text-center">
+                    <h2 class="text-4xl font-bold text-blue-600 mb-4">🏆</h2>
+                    <h1 class="text-3xl font-bold text-gray-800">Quiz Terminé</h1>
+                    <p class="text-lg text-gray-600 mt-2">Félicitations à tous les participants !</p>
+                </div>
+            </div>
+            
+            <!-- Podium à droite -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-2xl font-bold text-center mb-6 text-blue-600">Podium Final</h3>
+                
+                <!-- Podium principal (top 3) -->
+                <div class="flex items-end justify-center space-x-4 h-32 mb-6">
+                    ${sortedParticipants.slice(0, 3).map((participant, index) => {
+                        const [pseudo, score] = participant;
+                        const colors = ['bg-yellow-400', 'bg-gray-300', 'bg-orange-400'];
+                        const sizes = ['w-20 h-20', 'w-16 h-16', 'w-12 h-12'];
+                        const positions = ['1er', '2ème', '3ème'];
+                        const heights = ['h-24', 'h-20', 'h-16'];
+                        
+                        return `
+                            <div class="flex flex-col items-center">
+                                <div class="${heights[index]} ${colors[index]} rounded-t-lg flex items-center justify-center mb-2 relative">
+                                    <div class="${sizes[index]} bg-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg absolute -top-6">
+                                        ${pseudo.charAt(0).toUpperCase()}
+                                    </div>
+                                </div>
+                                <div class="text-sm font-bold text-gray-700 text-center">${pseudo}</div>
+                                <div class="text-lg font-bold text-gray-800">${score} pts</div>
+                                <div class="text-xs text-gray-500">${positions[index]}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <!-- Classement complet (top 6) -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-center mb-3 text-gray-700">Classement Complet</h4>
+                    <div class="space-y-2">
+                        ${sortedParticipants.map((participant, index) => {
+                            const [pseudo, score] = participant;
+                            const isTop3 = index < 3;
+                            
+                            return `
+                                <div class="flex items-center justify-between p-2 ${isTop3 ? 'bg-white shadow-sm' : 'bg-gray-100'} rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                            index === 0 ? 'bg-yellow-400' : 
+                                            index === 1 ? 'bg-gray-300' : 
+                                            index === 2 ? 'bg-orange-400' : 'bg-blue-100'
+                                        }">
+                                            ${index + 1}
+                                        </div>
+                                        <span class="font-medium text-sm ${isTop3 ? 'text-gray-800' : 'text-gray-600'}">${pseudo}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-sm text-gray-800">${score} pts</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-8">
+            <a href="/kahoot/generateur-quizzup/" 
+               class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                Retour au générateur
+            </a>
+        </div>
+    `;
+    
+    // Arrêter le polling
+    if (gamePolling) {
+        clearInterval(gamePolling);
+    }
+}
+
+// Fonction pour obtenir la couleur des options
+function getOptionColor(index) {
+    const colors = ['#EF4444', '#3B82F6', '#F59E0B', '#10B981']; // Rouge, Bleu, Jaune, Vert
+    return colors[index] || '#6B7280';
+}
+
+// Fonction pour démarrer la phase question
+async function startQuestionPhase() {
+    try {
+        const response = await fetch(`/kahoot/api/host/start-question/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            console.log('Phase question démarrée');
+        }
+    } catch (error) {
+        console.error('Erreur lors du démarrage de la phase question:', error);
+    }
+}
+
+// Fonction pour démarrer la phase réponses
+async function startAnswersPhase() {
+    try {
+        const response = await fetch(`/kahoot/api/host/start-answers/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            console.log('Phase réponses démarrée');
+            // Forcer un rafraîchissement immédiat de l'affichage
+            const stateResponse = await fetch(`/kahoot/api/state/${sessionCode}/`);
+            if (stateResponse.ok) {
+                const data = await stateResponse.json();
+                updateDisplay(data);
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors du démarrage de la phase réponses:', error);
+    }
+}
+
+// Fonction pour révéler les réponses
+async function revealAnswers() {
+    try {
+        const response = await fetch(`/kahoot/api/host/reveal/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            console.log('Réponses révélées');
+            // Forcer un rafraîchissement immédiat de l'affichage
+            const stateResponse = await fetch(`/kahoot/api/state/${sessionCode}/`);
+            if (stateResponse.ok) {
+                const data = await stateResponse.json();
+                // Forcer le rafraîchissement en réinitialisant la clé de question
+                currentQuestionId = null;
+                updateDisplay(data);
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors de la révélation des réponses:', error);
+    }
+}
+
+// Fonction pour gérer la sélection d'options (côté prof)
+function selectOption(optionId) {
+    // Retirer la sélection des autres options
+    document.querySelectorAll('.qopt-container').forEach(option => {
+        option.classList.remove('qopt-container--selected');
+    });
+    
+    // Ajouter la sélection à l'option cliquée
+    const selectedOption = document.querySelector(`[data-option-id="${optionId}"]`);
+    if (selectedOption) {
+        selectedOption.classList.add('qopt-container--selected');
+    }
+}
+
+// Fonction pour passer à la question suivante
+async function nextQuestion() {
+    try {
+        const response = await fetch(`/kahoot/api/host/next/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Réponse nextQuestion:', data);
+            
+            if (data.finished) {
+                console.log('Quiz terminé, affichage du podium');
+                // Forcer l'affichage du podium
+                displayFinalPodium(data.state);
+            } else {
+                console.log('Question suivante');
+                // Nettoyer les classes d'état
+                document.querySelectorAll('.qopt-container').forEach(option => {
+                    option.classList.remove('qopt-container--correct', 'qopt-container--selected');
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors du passage à la question suivante:', error);
+    }
+}
+
+// Fonction pour ajuster la hauteur des options en fonction de l'image
+function adjustOptionsHeight() {
+    const questionImage = document.getElementById('questionImage');
+    const optionsContainer = document.getElementById('optionsContainer');
+    
+    if (questionImage && optionsContainer) {
+        // Attendre que l'image soit chargée
+        if (questionImage.complete) {
+            setOptionsHeight();
+        } else {
+            questionImage.onload = setOptionsHeight;
+        }
+    }
+}
+
+function setOptionsHeight() {
+    const questionImage = document.getElementById('questionImage');
+    const optionsContainer = document.getElementById('optionsContainer');
+    
+    if (questionImage && optionsContainer) {
+        const imageHeight = questionImage.offsetHeight;
+        
+        // Ajuster la hauteur des options pour qu'elles correspondent à l'image
+        const optionButtons = optionsContainer.querySelectorAll('.qopt');
+        const optionHeight = Math.floor(imageHeight / 2); // 2 options par ligne
+        
+        optionButtons.forEach(button => {
+            button.style.height = optionHeight + 'px';
+            button.style.minHeight = optionHeight + 'px';
+        });
+    }
+}
+
+// Fonction utilitaire pour récupérer les cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fonction pour forcer le rendu MathJax
+function forceMathJaxRender() {
+    setTimeout(() => {
+        const questionContent = document.getElementById('questionContent');
+        if (questionContent && typeof MathJax !== 'undefined') {
+            if (MathJax.typesetPromise) {
+                MathJax.typesetPromise([questionContent]).then(() => {
+                    console.log('MathJax forcé avec succès');
+                }).catch((err) => console.log('Erreur MathJax forcé:', err));
+            } else if (MathJax.Hub) {
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub, questionContent]);
+            }
+        }
+    }, 1000);
+}
+
+// Nettoyer les timers quand on quitte la page
+window.addEventListener('beforeunload', function() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    if (gamePolling) {
+        clearInterval(gamePolling);
+    }
+});
+
+// Forcer le rendu MathJax au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    forceMathJaxRender();
+});
+</script>
+{% endblock %}
+

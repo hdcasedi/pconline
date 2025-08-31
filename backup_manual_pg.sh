@@ -11,7 +11,7 @@ SERVICE_NGINX="nginx"
 # === Config PostgreSQL (à adapter si besoin) ===
 : "${PGHOST:=localhost}"
 : "${PGPORT:=5432}"
-: "${PGUSER:=postgres}"        # ex: "pconline"
+: "${PGUSER:=pconline}"        # ex: "pconline"
 : "${PGDATABASE:=pconline}"    # nom de ta base
 # PGPASSWORD peut être exporté dans l’environnement pour éviter le prompt
 

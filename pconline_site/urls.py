@@ -7,6 +7,7 @@ from wagtail import urls as wagtail_urls
 from wagtail.documents import urls as wagtaildocs_urls
 
 from search import views as search_views
+from kahoot import views as kahoot_views
 
 
 
@@ -16,6 +17,8 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
     path('', include('home.urls')),
     path("cours/", include('cours.urls')),
+    path("generateur-quizzup/", kahoot_views.generator_page, name="generateur_quizzup"),
+    path("kahoot/", include('kahoot.urls')),
     path("admin/", include(wagtailadmin_urls)),
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),

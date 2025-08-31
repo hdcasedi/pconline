@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "cours",
     "flashcard",
     "qcm",
+    "kahoot",
     "wagtail.contrib.table_block",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",

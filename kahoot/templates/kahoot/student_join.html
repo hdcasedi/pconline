@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rejoindre le Quiz</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<!-- FULLSCREEN OVERLAY — un seul fond -->
+<div class="fixed inset-0 bg-blue-50 flex items-center justify-center">
+  <!-- Carte centrée, proportionnelle à l'écran, sans scroll global -->
+  <div id="card"
+       class="relative w-[min(92vw,500px)] h-[min(92vh,680px)] bg-white rounded-2xl shadow-2xl p-6 overflow-hidden">
+
+    <!-- Header compact (pseudo / score) -->
+    <div class="absolute top-4 left-6 right-6 flex items-center justify-between">
+      <span id="hdrPseudo" class="text-lg font-bold text-blue-900"></span>
+      <span id="hdrScore" class="text-base font-semibold text-slate-600"></span>
+    </div>
+
+    <!-- CONTENU (pile d'écrans) -->
+    <div class="h-full pt-10">
+      <!-- step1 -->
+      <section id="step1" class="h-full flex flex-col items-stretch justify-center gap-4">
+        <h1 class="text-center text-2xl font-extrabold text-blue-800">REJOINDRE LE QUIZ</h1>
+        <p class="text-center text-slate-600">Entrez le code de la session</p>
+        <form id="formSession" class="mt-2 grid gap-3">
+          <div class="text-center text-2xl font-mono font-bold text-blue-800 tracking-wider" id="sessionDisplay"></div>
+          <input id="sessionCode" type="text"
+                 class="w-full rounded-xl border border-slate-300 px-4 py-3 text-center text-lg
+                        focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="12345678" maxlength="8" pattern="[0-9]{8}" required>
+          <p class="text-xs text-slate-500 text-center">Code de 8 chiffres</p>
+          <button type="submit" class="w-full bg-blue-700 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+            Valider
+          </button>
+        </form>
+      </section>
+
+      <!-- step2 -->
+      <section id="step2" class="hidden h-full flex flex-col items-stretch justify-center gap-4">
+        <h1 class="text-center text-2xl font-extrabold text-blue-800">ENTREZ VOTRE PSEUDO</h1>
+        <p class="text-center text-slate-600">Choisissez un pseudo</p>
+        <form id="formPseudo" class="mt-2 grid gap-3">
+          <input id="pseudo" type="text"
+                 class="w-full rounded-xl border border-slate-300 px-4 py-3 text-center text-lg
+                        focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="Votre pseudo" required>
+          <button type="submit" class="w-full bg-blue-700 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+            Valider
+          </button>
+        </form>
+      </section>
+
+      <!-- step3 -->
+      <section id="step3" class="hidden h-full flex flex-col items-center justify-center gap-4 text-center">
+        <h1 class="text-2xl font-extrabold text-blue-800">BIENVENUE</h1>
+        <p class="text-slate-600">En attente du professeur…</p>
+        <div class="spinner mt-2"></div>
+        <div id="welcomePseudo" class="text-blue-900 font-semibold"></div>
+      </section>
+
+      <!-- step4 -->
+      <section id="step4" class="hidden h-full flex flex-col items-center justify-center gap-4 text-center">
+        <h2 id="prepQuestionNum" class="text-lg font-semibold text-blue-900"></h2>
+        <div class="spinner mt-2"></div>
+        <p class="text-slate-600">Préparez-vous !</p>
+      </section>
+
+      <!-- step5 -->
+      <section id="step5" class="hidden h-full flex flex-col">
+        <h2 id="qNum" class="text-center text-lg font-semibold text-blue-900 mt-1"></h2>
+        <div class="grid grid-cols-2 gap-3 mt-6">
+          <!-- boutons carrés avec images A,B,C,D -->
+          <button class="opt optA" data-opt="A">
+            <img src="/static/images/A.png" alt="A" class="w-full h-full object-contain">
+          </button>
+          <button class="opt optB" data-opt="B">
+            <img src="/static/images/B.png" alt="B" class="w-full h-full object-contain">
+          </button>
+          <button class="opt optC" data-opt="C">
+            <img src="/static/images/C.png" alt="C" class="w-full h-full object-contain">
+          </button>
+          <button class="opt optD" data-opt="D">
+            <img src="/static/images/D.png" alt="D" class="w-full h-full object-contain">
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 text-center mt-3">Touchez un bouton pour répondre</p>
+      </section>
+
+      <!-- step6 -->
+      <section id="step6" class="hidden h-full flex flex-col items-center justify-center gap-4 text-center">
+        <h2 id="waitQNum" class="text-lg font-semibold text-blue-900"></h2>
+        <div class="spinner mt-2"></div>
+        <p class="text-slate-600">En attente des autres concurrents…</p>
+      </section>
+
+      <!-- step7 - Résultat immédiat -->
+      <section id="step7" class="hidden h-full flex flex-col items-center justify-center gap-4 text-center">
+        <h2 id="resultQNum" class="text-lg font-semibold text-blue-900"></h2>
+        <div id="resultBox" class="mt-2 rounded-xl border p-4 font-semibold w-full"></div>
+        <p class="text-slate-600">En attente de la prochaine question…</p>
+      </section>
+
+      <!-- step8 - Fin du quiz -->
+      <section id="step8" class="hidden h-full flex flex-col items-center justify-center gap-4 text-center">
+        <h2 id="fbQNum" class="text-lg font-semibold text-blue-900"></h2>
+        <div id="fbBox" class="mt-2 rounded-xl border p-4 font-semibold w-full"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* petit spinner discret */
+  .spinner{width:40px;height:40px;border:4px solid #e5e7eb;border-top:4px solid #1e40af;border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* boutons A–D carrés avec images */
+  .opt{
+    aspect-ratio: 1/1;
+    border-width:2px; border-color:#cbd5e1;
+    border-radius:16px; background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .15s, box-shadow .15s, opacity .15s;
+    overflow: hidden;
+  }
+  .opt:hover{ transform:scale(1.03) }
+  .opt.sel{ outline:4px solid rgba(59,130,246,.6) }
+  /* couleurs façon kahoot */
+  .optA{ background:#fee2e2 } /* rouge pâle */
+  .optB{ background:#dbeafe } /* bleu pâle */
+  .optC{ background:#dcfce7 } /* vert pâle */
+  .optD{ background:#fde68a } /* jaune pâle */
+</style>
+
+<script>
+(() => {
+  // STATE
+  let sessionCode = "";
+  let pseudo = "";
+  let poll = null;
+  let currentKey = "";
+  let hasAnswered = false;
+
+  const $ = (s)=>document.querySelector(s);
+  const show = (id)=>{
+    for (const sec of document.querySelectorAll('#card section')) sec.classList.add('hidden');
+    document.getElementById(id).classList.remove('hidden');
+  };
+  const setHdr = (p='',score='')=>{
+    $('#hdrPseudo').textContent = p || '';
+    $('#hdrScore').textContent  = score ? `Score: ${score} pts` : '';
+  };
+  const csrf = ()=> '';
+
+  async function GET(u){ const r=await fetch(u,{headers:{'Accept':'application/json'}}); return {ok:r.ok,data:await r.json().catch(()=>({}))}; }
+  async function POST(u,b){ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(b)}); return {ok:r.ok,data:await r.json().catch(()=>({}))}; }
+
+  // Mettre à jour l'affichage du code
+  function updateSessionDisplay() {
+    const input = document.getElementById('sessionCode');
+    const display = document.getElementById('sessionDisplay');
+    const value = input.value.replace(/\D/g, '').slice(0, 8);
+    input.value = value;
+    if (value.length > 0) {
+      display.textContent = value.padEnd(8, '0');
+    } else {
+      display.textContent = '';
+    }
+  }
+
+  // step1
+  document.getElementById('formSession').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    sessionCode = document.getElementById('sessionCode').value.trim();
+    if(!sessionCode) return alert('Code requis');
+    if(!/^\d{8}$/.test(sessionCode)) return alert('Le code doit contenir exactement 8 chiffres');
+    const {ok}=await GET(`/kahoot/api/state/${sessionCode}/`);
+    if(!ok) return alert('Code de session invalide');
+    show('step2');
+  });
+
+  // step2
+  document.getElementById('formPseudo').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    pseudo = document.getElementById('pseudo').value.trim();
+    if(pseudo.length<2 || pseudo.length>20) return alert('2–20 caractères');
+    const btn = e.submitter; btn.disabled=true; btn.textContent='Connexion…';
+    const {ok,data}=await POST('/kahoot/api/join/',{code_session:sessionCode,pseudo});
+    if(!ok){ alert(data.error||'Erreur'); btn.disabled=false; btn.textContent='Valider'; return; }
+    $('#welcomePseudo').textContent = pseudo;
+    setHdr(pseudo,'');
+    show('step3'); startPolling();
+  });
+
+  function startPolling(){
+    stopPolling();
+    poll = setInterval(async ()=>{
+      const {ok,data}=await GET(`/kahoot/api/state/${sessionCode}/`);
+      if(!ok) return;
+      const key=`${data.question?.qid||'none'}|${data.current_phase||''}|${data.phase||''}`;
+      if(key===currentKey) return; currentKey=key;
+      render(data);
+    }, 900);
+  }
+  function stopPolling(){ if(poll){ clearInterval(poll); poll=null; } }
+  function me(data){ 
+    // score directement par pseudo
+    const score = (data.participant_scores && data.participant_scores[pseudo]) || 0;
+    return {global_score: score};
+  }
+
+  function render(s){
+    const m=me(s); setHdr(pseudo, m.global_score||0);
+
+    if(s.phase==='waiting'){ show('step3'); return; }
+
+    if(s.phase==='playing'){
+      const n=(s.current_question_index??0)+1;
+      if(s.current_phase==='question'){
+        show('step4'); document.getElementById('prepQuestionNum').textContent=`Question ${n}`;
+        hasAnswered = false;
+      } else if(s.current_phase==='answers'){
+        show('step5'); document.getElementById('qNum').textContent=`Question ${n}`;
+        document.querySelectorAll('.opt').forEach(b=>{
+          b.classList.remove('sel'); b.onclick=()=>select(b.dataset.opt);
+        });
+      } else if(s.current_phase==='results'){
+        // Afficher le résultat immédiat si on a répondu
+        if (hasAnswered) {
+          show('step7'); 
+          document.getElementById('resultQNum').textContent=`Question ${n}`;
+          let lastAnswer = null;
+          const dict = s.participant_answers ? s.participant_answers[pseudo] : null;
+          
+          // Debug complet
+          console.log('🔍 DEBUG RESULTS - Full data:', s);
+          console.log('🔍 DEBUG RESULTS - Data keys:', Object.keys(s));
+          console.log('🔍 DEBUG RESULTS - Pseudo:', pseudo);
+          console.log('🔍 DEBUG RESULTS - Participants:', s.participants);
+          console.log('🔍 DEBUG RESULTS - Participant answers:', s.participant_answers);
+          console.log('🔍 DEBUG RESULTS - Participant scores:', s.participant_scores);
+          console.log('🔍 DEBUG RESULTS - Current question index:', s.current_question_index);
+          
+          if (dict) {
+            // tente la question courante, sinon prend la plus récente
+            const currentQ = s.current_question_index.toString();
+            lastAnswer = dict[currentQ] || null;
+            if (!lastAnswer) {
+              const ks = Object.keys(dict).map(Number).sort((a,b)=>b-a);
+              if (ks.length) lastAnswer = dict[ks[0].toString()] || null;
+            }
+            
+            console.log('🔍 DEBUG RESULTS - Answers for participant:', dict);
+            console.log('🔍 DEBUG RESULTS - Current Q:', s.current_question_index);
+            console.log('🔍 DEBUG RESULTS - Last answer:', lastAnswer);
+          } else {
+            console.log('🔍 DEBUG RESULTS - No participant answers found');
+            console.log('🔍 DEBUG RESULTS - Participant answers exist:', !!s.participant_answers);
+            if (s.participant_answers) {
+              console.log('🔍 DEBUG RESULTS - Participant answers keys:', Object.keys(s.participant_answers));
+            }
+          }
+          
+          const ok = lastAnswer?.is_correct || false;
+          const pts = lastAnswer?.score || 0;
+          
+          console.log('🔍 DEBUG RESULTS - Final result - Is correct:', ok);
+          console.log('🔍 DEBUG RESULTS - Final result - Points:', pts);
+          
+          const box = document.getElementById('resultBox');
+          box.className='mt-2 rounded-xl border p-4 font-semibold w-full '+(ok?'border-green-500 bg-green-50 text-green-700':'border-rose-500 bg-rose-50 text-rose-700');
+          box.textContent = ok ? `✅ Correct ! +${pts} pts` : '❌ Incorrect';
+        } else {
+          show('step6'); document.getElementById('waitQNum').textContent=`Question ${n}`;
+        }
+      }
+      return;
+    }
+
+    if(s.phase==='finished'){
+      show('step8'); document.getElementById('fbQNum').textContent='Résultats finaux';
+      
+      // Trouver la dernière réponse du participant
+      let lastAnswer = null;
+      const dict = s.participant_answers ? s.participant_answers[pseudo] : null;
+      if (dict) {
+        const ks = Object.keys(dict).map(Number).sort((a,b)=>b-a);
+        if (ks.length) lastAnswer = dict[ks[0].toString()] || null;
+      }
+      
+      const ok = lastAnswer?.is_correct || false;
+      const pts = lastAnswer?.score || 0;
+      const box = document.getElementById('fbBox');
+      box.className='mt-2 rounded-xl border p-4 font-semibold w-full '+(ok?'border-green-500 bg-green-50 text-green-700':'border-rose-500 bg-rose-50 text-rose-700');
+      box.textContent = ok ? `✅ Correct ! +${pts} pts` : '❌ Incorrect';
+      stopPolling();
+    }
+  }
+
+  async function select(letter){
+    document.querySelectorAll('.opt').forEach(b=>b.onclick=null);
+    const btn=document.querySelector(`.opt[data-opt="${letter}"]`); if(btn) btn.classList.add('sel');
+    hasAnswered = true;
+    await POST('/kahoot/api/answer/',{code_session:sessionCode,pseudo,answer:letter});
+    show('step6');
+  }
+
+  // Prefill code from URL if present
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const parts=location.pathname.split('/').filter(Boolean);
+    const maybe=parts.at(-1);
+    if(maybe && /^\d{8}$/.test(maybe)) {
+      document.getElementById('sessionCode').value=maybe;
+      document.getElementById('sessionDisplay').textContent=maybe;
+    }
+    
+    // Écouter les changements dans l'input du code
+    document.getElementById('sessionCode').addEventListener('input', updateSessionDisplay);
+  });
+
+  // Auto-validation si le code est dans l'URL
+  document.addEventListener('DOMContentLoaded', async () => {
+    const parts = location.pathname.split('/').filter(Boolean);
+    const code = parts[parts.length - 1];
+    if (code && code.length <= 12) {
+      const input = document.getElementById('sessionCode');
+      if (input) input.value = code;
+      // auto-validation du code de session → passe à l'étape pseudo
+      try {
+        const r = await fetch(`/kahoot/api/state/${code}/`);
+        if (r.ok) {
+          // simule le submit du step1
+          sessionCode = code;
+          show('step2');
+        }
+      } catch(e){ console.warn(e); }
+    }
+  });
+})();
+</script>
+</body>
+</html>

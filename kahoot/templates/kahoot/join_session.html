@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Rejoindre la session - QuizzUp{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- En-tête -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-600 mb-2">Session QuizzUp</h1>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Colonne gauche : Liste des participants -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Participants</h2>
+                    <span id="participantsCount" class="text-lg font-bold text-blue-600">{{ session.participants|length }}</span>
+                </div>
+                <div id="participantsList" class="space-y-2 max-h-96 overflow-y-auto">
+                    {% if session.participants %}
+                        {% for participant in session.participants %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                            <span class="text-sm font-medium text-gray-700">{{ participant }}</span>
+                            <span class="text-xs text-green-600 font-semibold">● En ligne</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <div class="text-gray-400 text-6xl mb-4">👥</div>
+                            <p class="text-gray-500">Aucun participant pour le moment</p>
+                            <p class="text-sm text-gray-400 mt-2">Les élèves peuvent scanner le QR code pour rejoindre</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informations de session -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Informations</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">Questions :</span>
+                        <span class="text-sm text-gray-600 font-semibold">{{ session.questions_count }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">Chrono :</span>
+                        <span class="text-sm text-gray-600 font-semibold">
+                            {% if session.timer_enabled %}
+                                {{ session.timer_duration }}s
+                            {% else %}
+                                Désactivé
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">Statut :</span>
+                        <span id="sessionStatus" class="text-sm text-gray-600 font-semibold">
+                            {% if session.started_at %}
+                                En cours
+                            {% else %}
+                                En attente
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : QR Code et Code Session -->
+        <div class="space-y-6">
+            <!-- QR Code -->
+            <div class="bg-white rounded-lg shadow-md p-8 text-center">
+                <!-- Code session en haut -->
+                <div class="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                    <p class="text-sm text-blue-700 mb-2">Code de session :</p>
+                    <div class="text-4xl font-bold text-blue-800 tracking-wider">{{ session.short_code }}</div>
+                </div>
+
+                <div id="qrcode" class="flex justify-center mb-6">
+                    {# Fallback image si la lib JS n'est pas dispo #}
+                    <img id="qrcode-fallback"
+                         class="w-[260px] h-[260px]"
+                         alt="QR de la session"
+                         src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data={{ request.scheme }}://{{ request.get_host }}/kahoot/student/{{ session.short_code }}/">
+                </div>
+
+                <p class="text-sm text-gray-600 mb-4">Scannez ce QR code avec votre téléphone</p>
+
+                <div class="mt-4 pt-4 border-t">
+                    <p class="text-sm text-gray-600 mb-2">Connectez-vous à l'adresse :</p>
+                    <div class="p-2 bg-gray-50 rounded border">
+                        <code class="text-sm break-all text-blue-600">
+                            {{ request.scheme }}://{{ request.get_host }}/kahoot/student/
+                        </code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bouton Lancer le quiz en bas -->
+    <div class="text-center mt-8">
+        <button id="startBtn" 
+                class="bg-green-600 text-white py-3 px-8 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-lg">
+            {% if session.started_at %}
+                Quiz en cours
+            {% else %}
+                Lancer le quiz
+            {% endif %}
+        </button>
+    </div>
+</div>
+
+<!-- Script pour générer le QR code et gérer les interactions -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const studentUrl = "{{ request.scheme }}://{{ request.get_host }}/kahoot/student/{{ session.short_code }}/";
+  const holder = document.getElementById('qrcode');
+
+  // Si la lib est dispo, on remplace l'image fallback par un canvas haute qualité
+  if (holder && typeof QRCode !== 'undefined') {
+    const canvas = document.createElement('canvas');
+    holder.innerHTML = '';
+    holder.appendChild(canvas);
+    QRCode.toCanvas(canvas, studentUrl, {
+      width: 260,
+      margin: 2,
+      color: { dark: '#1f2937', light: '#ffffff' }
+    }, function (err) {
+      if (err) {
+        console.error('QR error:', err);
+        // Fallback : remet l'image si échec
+        holder.innerHTML =
+          '<img class="w-[260px] h-[260px]" alt="QR de la session" ' +
+          'src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(studentUrl) + '">';
+      }
+    });
+  }
+});
+
+// Éléments DOM
+const startBtn = document.getElementById('startBtn');
+const participantsList = document.getElementById('participantsList');
+const participantsCount = document.getElementById('participantsCount');
+
+// Session ID et Code
+const sessionId = '{{ session.session_id }}';
+const sessionCode = '{{ session.short_code }}';
+
+// Polling pour mettre à jour les participants et le statut
+let participantsPolling;
+
+function startPolling() {
+    participantsPolling = setInterval(async () => {
+        try {
+            const response = await fetch(`/kahoot/api/state/${sessionCode}/`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                updateParticipants(data.participants);
+                updateSessionStatus(data.phase);
+            }
+        } catch (error) {
+            console.error('Erreur lors du polling:', error);
+        }
+    }, 2000); // Polling toutes les 2 secondes
+}
+
+function updateSessionStatus(phase) {
+    const statusElement = document.getElementById('sessionStatus');
+    const startBtn = document.getElementById('startBtn');
+    
+    if (statusElement) {
+        statusElement.textContent = phase === 'waiting' ? 'En attente' : phase === 'playing' ? 'En cours' : 'Terminé';
+    }
+    
+    if (startBtn) {
+        if (phase === 'waiting') {
+            startBtn.textContent = 'Lancer le quiz';
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50');
+        } else if (phase === 'playing') {
+            startBtn.textContent = 'Quiz en cours';
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50');
+        } else {
+            startBtn.textContent = 'Quiz terminé';
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50');
+        }
+    }
+}
+
+function updateParticipants(participants) {
+    participantsCount.textContent = participants.length;
+    
+    if (participants.length === 0) {
+        participantsList.innerHTML = `
+            <div class="text-center py-8">
+                <div class="text-gray-400 text-6xl mb-4">👥</div>
+                <p class="text-gray-500">Aucun participant pour le moment</p>
+                <p class="text-sm text-gray-400 mt-2">Les élèves peuvent scanner le QR code pour rejoindre</p>
+            </div>
+        `;
+    } else {
+        participantsList.innerHTML = participants.map(participant => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                <span class="text-sm font-medium text-gray-700">${participant}</span>
+                <span class="text-xs text-green-600 font-semibold">● En ligne</span>
+            </div>
+        `).join('');
+    }
+}
+
+// Mettre à jour les participants immédiatement au chargement
+updateParticipants({{ session.participants|safe }});
+
+// Fonction pour démarrer le quiz
+async function startQuiz() {
+    try {
+        startBtn.disabled = true;
+        startBtn.textContent = 'Démarrage...';
+        
+        const response = await fetch(`/kahoot/api/host/start/${sessionCode}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            // Rediriger vers la page de jeu
+            window.location.href = `/kahoot/play/${sessionCode}/`;
+        } else {
+            const data = await response.json();
+            alert('Erreur: ' + (data.error || 'Impossible de démarrer la session'));
+            startBtn.disabled = false;
+            startBtn.textContent = 'Lancer le quiz';
+        }
+    } catch (error) {
+        alert('Erreur de connexion');
+        startBtn.disabled = false;
+        startBtn.textContent = 'Lancer le quiz';
+    }
+}
+
+// Démarrer le quiz
+startBtn.addEventListener('click', startQuiz);
+
+// Fonction utilitaire pour récupérer les cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Démarrer le polling au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    startPolling();
+});
+
+// Arrêter le polling quand on quitte la page
+window.addEventListener('beforeunload', function() {
+    if (participantsPolling) {
+        clearInterval(participantsPolling);
+    }
+});
+</script>
+{% endblock %}
+
+

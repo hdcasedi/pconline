@@ -5,21 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Physique Chimie Online{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  {% load static %}
-  <link rel="stylesheet" href="{% static 'css/qcm_fixes.css' %}">
-  {% block extra_css %}{% endblock %}
-  
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script>
     window.MathJax = {
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
-        displayMath: [['$$','$$'], ['\\[','\\]']]
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
       },
-      options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
-      svg: { fontCache: 'global' }
+      options: { 
+        skipHtmlTags: ['script','noscript','style','textarea','pre','code'],
+        processHtmlClass: 'mathjax-content'
+      },
+      svg: {
+        fontCache: 'global'
+      }
     };
   </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/qcm_fixes.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-blue-100 antialiased flex flex-col min-h-screen">
 
