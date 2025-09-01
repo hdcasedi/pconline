@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- En-tête -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-blue-800 mb-4">{{ page.title }}</h1>
+        {% if page.specific.intro %}
+        <div class="prose max-w-none">
+            {{ page.specific.intro|safe }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Liste des exercices -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for exercise in page.get_children.specific %}
+            {% if exercise.live %}
+            <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                    <a href="{{ exercise.url }}" class="hover:text-blue-600 transition-colors">
+                        {{ exercise.title }}
+                    </a>
+                </h3>
+                
+                <div class="flex items-center justify-between text-sm text-gray-600 mb-3">
+                    <span class="font-medium">{{ exercise.total_points }} points</span>
+                    <span>{{ exercise.estimated_time_min }} min</span>
+                    <span>Niveau {{ exercise.difficulty }}</span>
+                </div>
+                
+                {% if exercise.tags.all %}
+                <div class="flex flex-wrap gap-1 mb-3">
+                    {% for tag in exercise.tags.all %}
+                    <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                        {{ tag.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <a href="{{ exercise.url }}" 
+                   class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+                    Voir l'exercice
+                </a>
+            </div>
+            {% endif %}
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <p class="text-gray-500">Aucun exercice disponible pour le moment.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

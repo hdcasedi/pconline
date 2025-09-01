@@ -1,0 +1,31 @@
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true,
+    processEnvironments: true
+  },
+  chtml: {
+    displayAlign: 'left',
+    displayIndent: '0'
+  },
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js">
+</script>
+<script>
+// Charger mhchem explicitement
+window.addEventListener('load', function() {
+  if (window.MathJax) {
+    MathJax.loader.load(['input/tex', 'output/chtml', '[tex]/mhchem']).then(function() {
+      MathJax.typesetPromise();
+    });
+  }
+});
+</script>

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% load wagtailcore_tags %}
+{% load param_tags %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-[800px] mx-auto px-4 py-8">
+    <!-- En-tête de l'exercice -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-blue-800 mb-4">{{ page.title }}</h1>
+        
+        <!-- Bandeau mobile avec infos -->
+        <div class="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center justify-between text-sm">
+                <span class="font-medium">{{ page.total_points }} points</span>
+                <span>{{ page.estimated_time_min }} min</span>
+                <span class="text-gray-600">Niveau {{ page.difficulty }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grille principale : contenu + barème -->
+    <div class="md:grid md:grid-cols-[9fr_1fr] gap-6">
+        <!-- Contenu de l'exercice (90%) -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <!-- Contenu flexible : énoncé et questions mélangés -->
+            {% if page.contenu %}
+                {% for block in page.contenu %}
+                    {% render_with_params block param_values %}
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Barème (desktop) -->
+        <div class="hidden md:block">
+            {% include "exo/_barre_bareme.html" %}
+        </div>
+    </div>
+</div>
+
+<!-- Configuration MathJax -->
+{% block mathjax %}{% include "exo/_mathjax_config.html" %}{% endblock %}
+{% endblock %}

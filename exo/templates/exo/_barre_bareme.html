@@ -1,0 +1,38 @@
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 sticky top-20">
+    <h3 class="text-lg font-semibold text-blue-800 mb-4">Barème</h3>
+    
+    <!-- Questions -->
+    <div class="space-y-2 mb-4">
+        {% for block in page.contenu %}
+            {% if block.block_type == 'question' %}
+            <div class="flex justify-between items-center text-sm">
+                <span class="font-medium">{{ block.value.numero }}</span>
+                <span class="text-gray-600">{{ block.value.points|floatformat:2 }} pt</span>
+                {% if block.value.fc %}
+                <span class="text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">FC</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    
+    <!-- Total -->
+    <div class="border-t pt-3">
+        <div class="flex justify-between items-center font-semibold">
+            <span>Total</span>
+            <span>{{ page.total_points|floatformat:2 }} pt</span>
+        </div>
+    </div>
+    
+    <!-- Informations -->
+    <div class="border-t pt-3 mt-3 text-sm text-gray-600">
+        <div class="flex justify-between mb-1">
+            <span>Durée</span>
+            <span>{{ page.estimated_time_min }} min</span>
+        </div>
+        <div class="flex justify-between">
+            <span>Difficulté</span>
+            <span>Niveau {{ page.difficulty }}</span>
+        </div>
+    </div>
+</div>

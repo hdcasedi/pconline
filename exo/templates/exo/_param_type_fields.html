@@ -1,0 +1,109 @@
+{% load wagtailcore_tags %}
+
+{% if param.kind == 'const' %}
+    <!-- Constante → 1 champ -->
+    <div class="mt-3">
+        <input type="text"
+               value="{{ param.const_value }}"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+               placeholder="Valeur fixe"
+               data-field="const_value">
+    </div>
+{% elif param.kind == 'range' %}
+    <!-- Plage → 3 petits champs (min, max, pas) -->
+    <div class="mt-3 grid grid-cols-3 gap-2">
+        <div>
+            <input type="number"
+                   step="any"
+                   value="{{ param.range_min }}"
+                   class="w-full px-2 py-2 border border-gray-300 rounded-md text-sm"
+                   placeholder="Min"
+                   data-field="range_min">
+        </div>
+        <div>
+            <input type="number"
+                   step="any"
+                   value="{{ param.range_max }}"
+                   class="w-full px-2 py-2 border border-gray-300 rounded-md text-sm"
+                   placeholder="Max"
+                   data-field="range_max">
+        </div>
+        <div>
+            <input type="number"
+                   step="any"
+                   value="{{ param.range_step }}"
+                   class="w-full px-2 py-2 border border-gray-300 rounded-md text-sm"
+                   placeholder="Pas"
+                   data-field="range_step">
+        </div>
+    </div>
+{% elif param.kind == 'set' %}
+    <!-- Ensemble → 1 textarea auto-grandissante -->
+    <div class="mt-3">
+        <textarea class="autosize w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  rows="1"
+                  placeholder="Valeur 1; Valeur 2; Valeur 3&#10;ou&#10;Valeur 1&#10;Valeur 2&#10;Valeur 3"
+                  data-field="set_text">{{ param.set_text }}</textarea>
+        <p class="text-xs text-gray-500 mt-1">Séparer par ";" ou retour ligne (nombres ou texte court 1-3 mots)</p>
+    </div>
+{% elif param.kind == 'slot' %}
+    <!-- Slot → éditeur RichText + MathJax -->
+    <div class="mt-3">
+        <div class="richtext-editor">
+            <div class="border border-gray-300 rounded-md">
+                <div class="px-3 py-2 min-h-[100px]" contenteditable="true" data-field="slot_default">
+                    {{ param.slot_default|default:"Texte par défaut du slot..."|safe }}
+                </div>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Éditeur riche avec support MathJax - préserve les $…$</p>
+    </div>
+{% elif param.kind == 'image' %}
+    <!-- Image → liste ordonnée d'images -->
+    <div class="mt-3 space-y-2">
+        {% for image_entry in param.image_entries.all %}
+        <div class="flex items-center space-x-2 p-2 border border-gray-200 rounded bg-gray-50" data-image-id="{{ image_entry.id }}">
+            <div class="flex-shrink-0">
+                <img src="{{ image_entry.image.url }}" alt="" class="w-12 h-12 object-cover rounded">
+            </div>
+            <div class="flex-1">
+                <input type="text"
+                       value="{{ image_entry.caption }}"
+                       class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                       placeholder="Légende optionnelle"
+                       data-field="image_caption_{{ image_entry.id }}">
+            </div>
+            <div class="flex items-center space-x-1">
+                <button class="text-gray-500 hover:text-gray-700 px-1" onclick="moveImageUp(this)">↑</button>
+                <button class="text-gray-500 hover:text-gray-700 px-1" onclick="moveImageDown(this)">↓</button>
+                <button class="text-red-500 hover:text-red-700 px-1" onclick="removeImage(this)">×</button>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-sm text-gray-500 italic">Aucune image ajoutée</p>
+        {% endfor %}
+        <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600" onclick="addImage()">
+            + Ajouter une image
+        </button>
+    </div>
+{% elif param.kind == 'expr' %}
+    <!-- Expression → input MathJax avec aperçu rendu -->
+    <div class="mt-3 space-y-2">
+        <input type="text"
+               value="{{ param.expr_code }}"
+               class="expr-input w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+               placeholder="Expression mathématique (ex: [[param1]] + [[param2]])"
+               data-field="expr_code">
+        <div class="border border-gray-200 rounded-md p-3 bg-gray-50">
+            <div class="text-sm font-medium text-gray-700 mb-1">Aperçu rendu :</div>
+            <div class="mathjax-preview min-h-[2rem]">
+                {% if param.expr_code %}
+                    {{ param.expr_code|safe }}
+                {% else %}
+                    <span class="text-gray-400 italic">Aucun aperçu disponible</span>
+                {% endif %}
+            </div>
+        </div>
+        <p class="text-xs text-gray-500">Référence à d'autres paramètres avec [[nom_paramètre]]</p>
+    </div>
+{% endif %}

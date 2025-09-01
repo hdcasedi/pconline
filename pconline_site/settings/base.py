@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "flashcard",
     "qcm",
     "kahoot",
+    "exo",
     "wagtail.contrib.table_block",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",

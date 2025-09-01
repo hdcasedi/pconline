@@ -332,6 +332,7 @@ class CoursPage(Page):
         'qcm.QcmQuestionAPage',         # Type A (multi-propositions)
         'qcm.QcmBankBPage',             # Type B (banque de variantes)
         'qcm.QcmQuestionCPage',         # Type C (listes de réponses)
+        'exo.ExoHubPage',               # Hub des exercices
     ]
 
     def all_flashcards_qs(self):

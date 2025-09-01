@@ -1,0 +1,41 @@
+{% load wagtailcore_tags %}
+
+<div class="space-y-1">
+    {% for entry in param.sync_entries.all %}
+        <div class="text-xs border border-gray-200 rounded px-2 py-1">
+            <span class="font-medium">#{{ entry.index }}:</span>
+            {% if param.kind == 'slot' %}
+                {% if entry.value_richtext %}
+                    <span class="text-gray-600">Texte défini</span>
+                {% else %}
+                    <span class="text-gray-400">Vide</span>
+                {% endif %}
+            {% elif param.kind == 'image_override' %}
+                {% if entry.value_image %}
+                    <span class="text-gray-600">Image définie</span>
+                {% else %}
+                    <span class="text-gray-400">Aucune</span>
+                {% endif %}
+            {% elif param.kind in 'range,set,expr' %}
+                {% if entry.value_number is not None %}
+                    <span class="text-gray-600">{{ entry.value_number }}</span>
+                {% elif entry.value_text %}
+                    <span class="text-gray-600">{{ entry.value_text }}</span>
+                {% else %}
+                    <span class="text-gray-400">Vide</span>
+                {% endif %}
+            {% else %}
+                {% if entry.value_text %}
+                    <span class="text-gray-600">{{ entry.value_text|truncatechars:20 }}</span>
+                {% else %}
+                    <span class="text-gray-400">Vide</span>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="text-xs text-gray-400">
+            Aucune entrée
+        </div>
+    {% endfor %}
+</div>
+

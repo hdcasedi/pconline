@@ -1,0 +1,51 @@
+{% load wagtailcore_tags %}
+
+<div class="space-y-2">
+    {% if param.kind == 'range' %}
+        <div class="grid grid-cols-3 gap-2 text-xs">
+            <div>Min: {{ param.range_min|default:"-" }}</div>
+            <div>Max: {{ param.range_max|default:"-" }}</div>
+            <div>Pas: {{ param.range_step|default:"-" }}</div>
+        </div>
+    {% elif param.kind == 'set' %}
+        <div class="text-xs">
+            {% if param.set_values %}
+                {{ param.set_values|length }} valeurs
+            {% else %}
+                Aucune valeur
+            {% endif %}
+        </div>
+    {% elif param.kind == 'const' %}
+        <div class="text-xs text-gray-600">
+            {{ param.const_value|truncatechars:30 }}
+        </div>
+    {% elif param.kind == 'expr' %}
+        <div class="text-xs text-gray-600">
+            {{ param.expr_code|truncatechars:30 }}
+        </div>
+    {% elif param.kind == 'slot' %}
+        <div class="text-xs text-gray-600">
+            {% if param.slot_default %}
+                Texte par défaut défini
+            {% else %}
+                Utilise le défaut de l'exo
+            {% endif %}
+        </div>
+    {% elif param.kind == 'image_override' %}
+        <div class="text-xs text-gray-600">
+            {% if param.image_default %}
+                Image par défaut définie
+            {% else %}
+                Utilise l'image de l'exo
+            {% endif %}
+        </div>
+    {% elif param.kind == 'value' %}
+        <div class="text-xs text-gray-600">
+            Valeur simple détectée
+        </div>
+    {% else %}
+        <div class="text-xs text-gray-400">
+            Type non défini
+        </div>
+    {% endif %}
+</div>

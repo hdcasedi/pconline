@@ -1,0 +1,715 @@
+{% extends "base.html" %}
+{% load static %}
+{% load wagtailcore_tags %}
+{% csrf_token %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-blue-800 mb-4">{{ page.title }}</h1>
+        <p class="text-gray-600">Paramétrage de l'exercice : {{ page.get_parent.title }}</p>
+        <p class="text-sm text-gray-500">Page ID: {{ page.id|default:"Non défini" }}</p>
+
+        {% if not page.id %}
+        <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        Mode Preview
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>Vous êtes en mode preview. Les fonctionnalités de paramétrage ne sont disponibles que sur la page publiée.</p>
+                        <p class="mt-1">Cliquez sur "Publier" pour accéder aux fonctionnalités complètes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Bandeau pour les paramètres orphelins -->
+        {% with orphaned_params=page.param_items.all %}
+        {% if orphaned_params %}
+        <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        Paramètres orphelins détectés
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>Les paramètres suivants ne sont plus utilisés dans l'exercice parent :</p>
+                        <ul class="mt-1 list-disc list-inside">
+                            {% for param in orphaned_params %}
+                                {% if param.is_orphaned %}
+                                <li>{{ param.name }} ({{ param.get_kind_display }})</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Bandeau d'erreur pour incohérence de synchronisation -->
+        {% with sync_errors=page.validate_sync_coherence %}
+        {% if sync_errors %}
+        <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">
+                        Erreur de cohérence des paramètres synchronisés
+                    </h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <ul class="list-disc list-inside">
+                            {% for error in sync_errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Onglets -->
+    <div class="border-b border-gray-200 mb-6">
+        <nav class="-mb-px flex space-x-8">
+            <button class="tab-button active py-2 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600"
+                    data-tab="parametres">
+                Paramètres
+            </button>
+            <button class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700"
+                    data-tab="apercu">
+                Aperçu
+            </button>
+            <button class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700"
+                    data-tab="validation">
+                Validation
+            </button>
+        </nav>
+    </div>
+
+    <!-- Onglet Paramètres -->
+    <div id="parametres" class="tab-content active">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Configuration des paramètres</h2>
+
+            <!-- En-tête avec badge K déduit et bouton Rescanner -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        {% with computed_k=page.compute_sync_K %}
+                        {% if computed_k %}
+                        <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            <span class="mr-2">K déduit = {{ computed_k }}</span>
+                        </div>
+                        {% else %}
+                        <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                            <span class="mr-2">Aucun paramètre synchronisé</span>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button id="rescan-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 {% if not page.id %}opacity-50 cursor-not-allowed{% endif %}" {% if not page.id %}disabled{% endif %}>
+                            🔍 Rescanner (auto-créer)
+                        </button>
+                        <button id="test-content-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 {% if not page.id %}opacity-50 cursor-not-allowed{% endif %}" {% if not page.id %}disabled{% endif %}>
+                            🧪 Test extraction contenu
+                        </button>
+                        <button id="ping-btn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                            🏓 Test connexion
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des paramètres -->
+            <div class="space-y-4">
+                {% for param in page.param_items.all %}
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <!-- Ligne 1 : Sync | Nom | Type -->
+                    <div class="flex items-center space-x-4 mb-3">
+                        <div class="flex items-center">
+                            <input type="checkbox"
+                                   class="param-sync-checkbox rounded border-gray-300 text-blue-600"
+                                   data-param-id="{{ param.id }}"
+                                   {% if param.sync_enabled %}checked{% endif %}>
+                            <span class="ml-2 text-sm text-gray-700">Synchro</span>
+                        </div>
+
+                        <div class="flex-1">
+                            <input type="text"
+                                   value="{{ param.name }}"
+                                   maxlength="10"
+                                   class="param-name-input w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                   data-param-id="{{ param.id }}"
+                                   placeholder="Nom du paramètre*">
+                        </div>
+
+                        <div class="w-32">
+                            <select class="param-kind-select w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                    data-param-id="{{ param.id }}">
+                                {% for value, label in param.KIND_CHOICES %}
+                                <option value="{{ value }}" {% if param.kind == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="text-sm">
+                            {% if param.is_orphaned %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Orphelin
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    OK
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Ligne 2 : Configuration dynamique selon le type -->
+                    <div class="param-config-area" data-param-id="{{ param.id }}">
+                        {% include "exo/_param_type_fields.html" with param=param %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-gray-500 py-8">
+                    Aucun paramètre détecté. Cliquez sur "Rescanner (auto-créer)".
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Aperçu -->
+    <div id="apercu" class="tab-content hidden">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Aperçu des variantes</h2>
+
+            <!-- Contrôles -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div class="flex flex-wrap gap-4 items-center">
+                    {% with computed_k=page.compute_sync_K %}
+                    {% if computed_k and computed_k > 1 %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Variante synchronisée
+                        </label>
+                        <select id="variant-selector" class="px-3 py-2 border border-gray-300 rounded-md">
+                            {% for i in computed_k|add:"0"|times %}
+                            <option value="{{ forloop.counter }}">#{{ forloop.counter }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+
+                    <div>
+                        <button id="resample-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                            🎲 Resampler les non cochés
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Résultats -->
+            <div id="preview-results" class="space-y-4">
+                <div class="text-center text-gray-500 py-8">
+                    {% with computed_k=page.compute_sync_K %}
+                    {% if computed_k and computed_k > 1 %}
+                        Sélectionnez une variante pour voir l'aperçu
+                    {% else %}
+                        Aucune variante disponible (K=1 ou aucun paramètre synchronisé)
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Validation -->
+    <div id="validation" class="tab-content hidden">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Validation</h2>
+
+            <div id="validation-results" class="space-y-4">
+                <div class="text-center text-gray-500 py-8">
+                    Chargement des validations...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Token CSRF global
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+// Gestion des onglets
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+        // Désactiver tous les onglets
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        });
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+            content.classList.remove('active');
+        });
+
+        // Activer l'onglet cliqué
+        button.classList.add('active', 'border-blue-500', 'text-blue-600');
+        button.classList.remove('border-transparent', 'text-gray-500');
+
+        const tabId = button.dataset.tab;
+        document.getElementById(tabId).classList.remove('hidden');
+        document.getElementById(tabId).classList.add('active');
+    });
+});
+
+// Gestion des paramètres dynamiques
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up event listeners...');
+
+    // Gestion des sélecteurs de type de paramètre
+    document.querySelectorAll('.param-kind-select').forEach(select => {
+        console.log('Found select:', select, 'param-id:', select.dataset.paramId);
+        select.addEventListener('change', function() {
+            const paramId = this.dataset.paramId;
+            const kind = this.value;
+            console.log('Select changed! paramId:', paramId, 'kind:', kind);
+            updateParamConfig(paramId, kind);
+        });
+    });
+
+    // Gestion des checkboxes de synchronisation
+    document.querySelectorAll('.param-sync-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const paramId = this.dataset.paramId;
+            const syncEnabled = this.checked;
+            updateParamSync(paramId, syncEnabled);
+        });
+    });
+
+    // Gestion des noms de paramètres
+    document.querySelectorAll('.param-name-input').forEach(input => {
+        input.addEventListener('blur', function() {
+            const paramId = this.dataset.paramId;
+            const name = this.value;
+            updateParamName(paramId, name);
+        });
+    });
+
+    // Initialiser les textareas autosize
+    document.querySelectorAll('textarea.autosize').forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+        // Initial resize
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    });
+
+    console.log('Event listeners setup complete');
+});
+
+// Fonction pour mettre à jour la configuration d'un paramètre
+function updateParamConfig(paramId, kind) {
+    console.log('updateParamConfig called with:', paramId, kind);
+    const configArea = document.querySelector(`.param-config-area[data-param-id="${paramId}"]`);
+    console.log('configArea found:', !!configArea, configArea);
+    if (!configArea) {
+        console.error('Config area not found for param:', paramId);
+        return;
+    }
+
+    // Charger le template de configuration approprié
+    const url = `/exo/param-config/${paramId}/?kind=${encodeURIComponent(kind)}`;
+    console.log('Fetching URL:', url);
+
+    fetch(url)
+        .then(res => {
+            console.log('Response status:', res.status);
+            if (!res.ok) return res.text().then(t => { throw new Error(t || `HTTP ${res.status}`); });
+            return res.text();
+        })
+        .then(html => {
+            console.log('Received HTML length:', html.length);
+            console.log('HTML preview:', html.substring(0, 200));
+            configArea.innerHTML = html;
+            initializeConfigArea(configArea);
+            console.log('Config area updated successfully');
+        })
+        .catch(err => {
+            console.error('param-config error:', err);
+            configArea.innerHTML = '<div class="text-red-600 text-sm">Erreur chargement config: ' + err.message + '</div>';
+        });
+}
+
+// Fonction pour initialiser une zone de configuration
+function initializeConfigArea(configArea) {
+    // Auto-resize pour les textareas
+    const textareas = configArea.querySelectorAll('textarea.autosize');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+        // Initial resize
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    });
+
+    // Preview MathJax pour les expressions
+    const exprInputs = configArea.querySelectorAll('.expr-input');
+    exprInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            updateMathJaxPreview(this);
+        });
+        // Initial preview
+        updateMathJaxPreview(input);
+    });
+
+    // Sauvegarde automatique pour tous les champs de configuration
+    const allFields = configArea.querySelectorAll('[data-field]');
+    allFields.forEach(field => {
+        field.addEventListener('blur', function() {
+            saveFieldValue(this);
+        });
+        field.addEventListener('change', function() {
+            saveFieldValue(this);
+        });
+    });
+
+    // Gestion spéciale pour les contenteditable (slots)
+    const editables = configArea.querySelectorAll('[contenteditable="true"]');
+    editables.forEach(editor => {
+        editor.addEventListener('blur', function() {
+            saveContentEditable(this);
+        });
+        editor.addEventListener('input', function() {
+            // Sauvegarde automatique avec debounce
+            clearTimeout(this._saveTimeout);
+            this._saveTimeout = setTimeout(() => saveContentEditable(this), 1000);
+        });
+    });
+}
+
+// Fonction pour sauvegarder un champ
+function saveFieldValue(field) {
+    const paramId = findParamId(field);
+    const fieldName = field.dataset.field;
+    const value = field.value;
+
+    if (!paramId || !fieldName) return;
+
+    fetch(`/exo/param-field/${paramId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ field: fieldName, value: value })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Erreur sauvegarde:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur sauvegarde:', error);
+    });
+}
+
+// Fonction pour sauvegarder le contenu éditable
+function saveContentEditable(editor) {
+    const paramId = findParamId(editor);
+    const fieldName = editor.dataset.field;
+    const value = editor.innerHTML;
+
+    if (!paramId || !fieldName) return;
+
+    fetch(`/exo/param-field/${paramId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ field: fieldName, value: value })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Erreur sauvegarde:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur sauvegarde:', error);
+    });
+}
+
+// Fonction pour trouver l'ID du paramètre
+function findParamId(element) {
+    let current = element;
+    while (current && current !== document.body) {
+        if (current.dataset && current.dataset.paramId) {
+            return current.dataset.paramId;
+        }
+        current = current.parentElement;
+    }
+    return null;
+}
+
+// Fonction pour mettre à jour la synchronisation
+function updateParamSync(paramId, syncEnabled) {
+    fetch(`/exo/param-sync/${paramId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sync_enabled: syncEnabled })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Recharger la page pour mettre à jour le badge K
+            location.reload();
+        } else {
+            alert('Erreur lors de la mise à jour: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la mise à jour');
+    });
+}
+
+// Fonction pour mettre à jour le nom
+function updateParamName(paramId, name) {
+    fetch(`/exo/param-name/${paramId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: name })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            alert('Erreur lors de la mise à jour: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la mise à jour');
+    });
+}
+
+// Fonction pour mettre à jour l'aperçu MathJax
+function updateMathJaxPreview(input) {
+    const container = input.closest('.space-y-2');
+    const preview = container.querySelector('.mathjax-preview');
+
+    if (preview) {
+        const value = input.value.trim();
+        if (value) {
+            preview.innerHTML = value;
+        } else {
+            preview.innerHTML = '<span class="text-gray-400 italic">Aucun aperçu disponible</span>';
+        }
+
+        // Déclencher le rendu MathJax si disponible
+        if (window.MathJax) {
+            MathJax.typeset([preview]);
+        }
+    }
+}
+
+// Bouton Rescanner
+document.getElementById('rescan-btn').addEventListener('click', async () => {
+    try {
+        const pageId = {{ page.id|default:"null" }};
+        if (!pageId) {
+            alert('Erreur: Page ID non disponible (mode preview)');
+            return;
+        }
+
+        const response = await fetch(`/exo/rescan-parent/${pageId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            const errorData = await response.json();
+            alert('Erreur lors du rescan: ' + (errorData.error || response.statusText));
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors du rescan: ' + error.message);
+    }
+});
+
+// Bouton Test extraction contenu
+document.getElementById('test-content-btn').addEventListener('click', async () => {
+    try {
+        const pageId = {{ page.id|default:"null" }};
+        if (!pageId) {
+            alert('Erreur: Page ID non disponible (mode preview)');
+            return;
+        }
+
+        const response = await fetch(`/exo/test-content/${pageId}/`);
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Contenu extrait:', data);
+        alert(`Contenu extrait (${data.content_length} caractères):\n\n${data.content_preview}`);
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors du test d\'extraction: ' + error.message);
+    }
+});
+
+// Bouton Ping
+document.getElementById('ping-btn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/exo/ping/');
+        const data = await response.json();
+        console.log('Ping response:', data);
+        alert('Connexion OK: ' + data.message);
+    } catch (error) {
+        console.error('Erreur ping:', error);
+        alert('Erreur de connexion: ' + error.message);
+    }
+});
+
+// Aperçu des variantes
+document.getElementById('variant-selector')?.addEventListener('change', async () => {
+    const variant = document.getElementById('variant-selector').value;
+    await loadPreview(variant);
+});
+
+document.getElementById('resample-btn')?.addEventListener('click', async () => {
+    const variant = document.getElementById('variant-selector')?.value || 1;
+    await loadPreview(variant, true);
+});
+
+async function loadPreview(variant, resample = false) {
+    try {
+        const url = `/exo/preview-variant/{{ page.id }}/?variant=${variant}`;
+        if (resample) url += '&resample=true';
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (response.ok) {
+            displayPreview(data);
+        } else {
+            alert('Erreur lors du chargement de l\'aperçu');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors du chargement de l\'aperçu');
+    }
+}
+
+function displayPreview(data) {
+    const container = document.getElementById('preview-results');
+
+    if (Object.keys(data.params).length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-500 py-8">Aucun paramètre configuré</div>';
+        return;
+    }
+
+    let html = '<div class="space-y-4">';
+    for (const [name, value] of Object.entries(data.params)) {
+        html += `
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="font-medium text-gray-900">${name}</div>
+                <div class="text-gray-600">${value}</div>
+            </div>
+        `;
+    }
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+// Charger les validations au chargement de l'onglet
+document.querySelector('[data-tab="validation"]').addEventListener('click', async () => {
+    try {
+        const response = await fetch(`/exo/validate-params/{{ page.id }}/`);
+        const data = await response.json();
+
+        if (response.ok) {
+            displayValidation(data.errors);
+        } else {
+            alert('Erreur lors de la validation');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la validation');
+    }
+});
+
+function displayValidation(errors) {
+    const container = document.getElementById('validation-results');
+
+    if (errors.length === 0) {
+        container.innerHTML = '<div class="text-center text-green-600 py-8">✅ Aucune erreur de validation</div>';
+        return;
+    }
+
+    let html = '<div class="space-y-4">';
+    for (const error of errors) {
+        html += `
+            <div class="border border-red-200 bg-red-50 rounded-lg p-4">
+                <div class="text-red-800">⚠️ ${error}</div>
+            </div>
+        `;
+    }
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+</script>
+{% endblock %}
