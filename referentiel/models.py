@@ -1,6 +1,36 @@
 from django.db import models
+from django import forms
 from wagtail.admin.panels import FieldPanel
 from wagtail.snippets.models import register_snippet
+
+
+class ColorInput(forms.TextInput):
+    """Widget pour sélectionner une couleur"""
+    input_type = 'color'
+    template_name = 'django/forms/widgets/input.html'
+
+
+@register_snippet
+class CategorieMethode(models.Model):
+    nom = models.CharField(max_length=200, verbose_name="Nom de la catégorie")
+    couleur = models.CharField(
+        max_length=7, 
+        verbose_name="Code couleur", 
+        help_text="Code couleur hexadécimal (ex: #FF0000)",
+        default="#007bff"
+    )
+
+    panels = [
+        FieldPanel("nom"),
+        FieldPanel("couleur", widget=ColorInput),
+    ]
+
+    def __str__(self):
+        return self.nom
+
+    class Meta:
+        verbose_name = "Catégorie fiche méthode"
+        verbose_name_plural = "Catégories fiches méthode"
 
 
 @register_snippet

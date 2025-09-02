@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+{% load wagtailcore_tags %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Titre et introduction -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ page.title }}</h1>
+        {% if page.intro %}
+            <div class="prose max-w-none">
+                {{ page.intro|richtext }}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Onglets Collège/Lycée -->
+    <div class="mb-8">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <a href="?onglet=college" 
+                   class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm {% if onglet_actif == 'college' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                    Collège
+                </a>
+                <a href="?onglet=lycee" 
+                   class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm {% if onglet_actif == 'lycee' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                    Lycée
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Grille des cartes par catégorie -->
+    {% if categories_fiches %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for nom_categorie, data in categories_fiches.items %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+                    <!-- En-tête de la carte avec couleur de la catégorie -->
+                    <div class="px-6 py-4 border-b border-gray-200" style="background-color: {{ data.categorie.couleur }}20;">
+                        <h3 class="text-lg font-semibold text-gray-900" style="color: {{ data.categorie.couleur }};">
+                            {{ data.categorie.nom }}
+                        </h3>
+                    </div>
+                    
+                    <!-- Liste des fiches méthode -->
+                    <div class="p-6">
+                        {% if data.fiches %}
+                            <ul class="space-y-3">
+                                {% for fiche in data.fiches %}
+                                    <li class="flex items-center">
+                                        <div class="flex-shrink-0 w-2 h-2 rounded-full mr-3" style="background-color: {{ data.categorie.couleur }};"></div>
+                                        <a href="{{ fiche.url }}" 
+                                           class="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200">
+                                            {{ fiche.title }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-gray-500 italic">Aucune fiche méthode dans cette catégorie</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-12">
+            <div class="text-gray-500">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Aucune fiche méthode</h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    Aucune fiche méthode n'est disponible pour le niveau {{ onglet_actif|title }}.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    /* Styles personnalisés pour améliorer l'apparence */
+    .prose {
+        color: #374151;
+        line-height: 1.6;
+    }
+    
+    .prose p {
+        margin-bottom: 1rem;
+    }
+    
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+    }
+    
+    .prose ol {
+        list-style-type: decimal;
+        padding-left: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+
+
+
+

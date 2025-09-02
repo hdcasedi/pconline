@@ -1,0 +1,18 @@
+{% load wagtailcore_tags %}
+{#
+Styles attendus via classes dans le contenu RichText:
+- normal (par défaut)
+- etape (étape avec titre)
+- protocole
+- exemple (exemple avec titre)
+#}
+<div class="prose max-w-none">
+  {{ self|richtext }}
+  {# Les styles spécifiques seront appliqués via les classes dans le HTML #}
+  {# Ex: <div class="etape"><h4>Étape 1</h4>...</div> #}
+</div>
+
+
+
+
+

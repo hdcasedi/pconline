@@ -1,0 +1,56 @@
+{% load wagtailcore_tags %}
+
+<style>
+  .m-paragraphe ul { list-style-type: disc; padding-left: 1.5rem; margin: 1rem 0; }
+  .m-paragraphe ol { list-style-type: decimal; padding-left: 1.5rem; margin: 1rem 0; }
+  .m-paragraphe li { margin: 0.5rem 0; }
+  .m-paragraphe h2, .m-paragraphe h3 { margin: 1rem 0 0.5rem 0; font-weight: bold; }
+  .m-paragraphe p { margin: 0.5rem 0; }
+</style>
+
+{% if value.style == 'normal' %}
+  <div class="mb-4 m-paragraphe">
+    {{ value.contenu|richtext }}
+  </div>
+{% elif value.style == 'exemple' %}
+  <div class="mb-4 p-4 bg-white border-l-4 border-green-800 rounded-r">
+    <div class="font-semibold text-green-800 mb-2">
+      {% if value.titre %}{{ value.titre }}{% else %}Exemple{% endif %}
+    </div>
+    <div class="m-paragraphe">
+      {{ value.contenu|richtext }}
+    </div>
+  </div>
+{% elif value.style == 'etape' %}
+  <div class="mb-4 p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-r">
+    <div class="font-semibold text-indigo-700 mb-2">
+      {% if value.titre %}{{ value.titre }}{% else %}Étape{% endif %}
+    </div>
+    <div class="m-paragraphe">
+      {{ value.contenu|richtext }}
+    </div>
+  </div>
+{% elif value.style == 'protocole' %}
+  <div class="mb-4 p-4 bg-emerald-50 border-l-4 border-emerald-600 rounded-r">
+    <div class="font-semibold text-emerald-700 mb-2">
+      {% if value.titre %}{{ value.titre }}{% else %}Protocole{% endif %}
+    </div>
+    <div class="m-paragraphe">
+      {{ value.contenu|richtext }}
+    </div>
+  </div>
+{% elif value.style == 'methode' %}
+  <div class="mb-4 p-4 bg-fuchsia-50 border-l-4 border-fuchsia-600 rounded-r">
+    <div class="font-semibold text-fuchsia-700 mb-2">
+      {% if value.titre %}{{ value.titre }}{% else %}Méthode{% endif %}
+    </div>
+    <div class="m-paragraphe">
+      {{ value.contenu|richtext }}
+    </div>
+  </div>
+{% endif %}
+
+
+
+
+

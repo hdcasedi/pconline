@@ -1,0 +1,24 @@
+{% load wagtailcore_tags %}
+{% load static %}
+
+<div class="relative grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+  {% if value.video_url %}
+    <button class="absolute top-2 right-2" onclick="window.dispatchEvent(new CustomEvent('open-video', { detail: '{{ value.video_url }}' }))" title="Voir la vidéo" aria-label="Ouvrir la vidéo">
+      <img src="https://physiquechimie.online/media/images/lecteur-video.original.png" alt="Vidéo" class="w-12 h-12 drop-shadow" style="width: 48px; height: 48px;" />
+    </button>
+  {% endif %}
+
+  {% if value.ratio == "50-50" %}
+    <div class="lg:col-span-6">{% for b in value.left %}{% include_block b %}{% endfor %}</div>
+    <div class="lg:col-span-6">{% for b in value.right %}{% include_block b %}{% endfor %}</div>
+  {% elif value.ratio == "70-30" %}
+    <div class="lg:col-span-8">{% for b in value.left %}{% include_block b %}{% endfor %}</div>
+    <div class="lg:col-span-4">{% for b in value.right %}{% include_block b %}{% endfor %}</div>
+  {% elif value.ratio == "30-70" %}
+    <div class="lg:col-span-4">{% for b in value.left %}{% include_block b %}{% endfor %}</div>
+    <div class="lg:col-span-8">{% for b in value.right %}{% include_block b %}{% endfor %}</div>
+  {% endif %}
+</div>
+
+
+

@@ -1,0 +1,16 @@
+{% load wagtailcore_tags %}
+
+<div class="mb-4">
+  {% if value.niveau == 'h1' %}
+    <h1 class="text-3xl font-bold text-blue-800">{{ value.texte }}</h1>
+  {% elif value.niveau == 'h2' %}
+    <h2 class="text-2xl font-bold text-blue-700">{{ value.texte }}</h2>
+  {% elif value.niveau == 'h3' %}
+    <h3 class="text-xl font-semibold text-blue-600">{{ value.texte }}</h3>
+  {% endif %}
+  </div>
+
+
+
+
+

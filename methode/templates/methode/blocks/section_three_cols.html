@@ -1,0 +1,17 @@
+{% load wagtailcore_tags %}
+{% load static %}
+
+<div class="relative grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+  {% if value.video_url %}
+    <button class="absolute top-2 right-2" onclick="window.dispatchEvent(new CustomEvent('open-video', { detail: '{{ value.video_url }}' }))" title="Voir la vidéo" aria-label="Ouvrir la vidéo">
+      <img src="https://physiquechimie.online/media/images/lecteur-video.original.png" alt="Vidéo" class="w-12 h-12 drop-shadow" style="width: 48px; height: 48px;" />
+    </button>
+  {% endif %}
+
+  <div class="lg:col-span-4">{% for b in value.col1 %}{% include_block b %}{% endfor %}</div>
+  <div class="lg:col-span-4">{% for b in value.col2 %}{% include_block b %}{% endfor %}</div>
+  <div class="lg:col-span-4">{% for b in value.col3 %}{% include_block b %}{% endfor %}</div>
+</div>
+
+
+

@@ -1,7 +1,10 @@
 {% load wagtailcore_tags %}
 
 {# 12 colonnes sur desktop, empilé sur mobile #}
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+<div class="relative grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+  {% if value.video_url %}
+    <button class="absolute top-2 right-2 text-blue-700" onclick="window.dispatchEvent(new CustomEvent('open-video', { detail: '{{ value.video_url }}' }))" title="Voir la vidéo">📺</button>
+  {% endif %}
   {% if value.ratio == "50-50" %}
     <div class="lg:col-span-6">
       {% for b in value.left %}{% include_block b %}{% endfor %}

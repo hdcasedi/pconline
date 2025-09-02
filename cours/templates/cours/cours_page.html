@@ -148,4 +148,36 @@
 
 })();
 </script>
+
+<!-- Modal vidéo pour les sections -->
+<div id="video-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+  <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden">
+    <div class="flex justify-between items-center p-3 border-b">
+      <div class="font-medium">Vidéo</div>
+      <button class="px-3 py-1 text-sm" onclick="(function(){
+        const m=document.getElementById('video-modal');
+        const f=document.getElementById('video-frame');
+        f.src=''; m.classList.add('hidden'); m.classList.remove('flex');
+      })()">✖</button>
+    </div>
+    <div class="aspect-video">
+      <iframe id="video-frame" src="" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    function openVideoModal(url){
+      const modal = document.getElementById('video-modal');
+      const frame = document.getElementById('video-frame');
+      frame.src = url;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    window.addEventListener('open-video', function(e){
+      openVideoModal(e.detail);
+    });
+  })();
+</script>
 {% endblock %}

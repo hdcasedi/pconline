@@ -1,0 +1,17 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+<div class="rounded-lg border border-slate-200 overflow-hidden">
+  {% if value.image %}
+  <div class="h-40 overflow-hidden">
+    {% image value.image fill-800x300 class="w-full h-full object-cover" %}
+  </div>
+  {% endif %}
+  <div class="p-4">
+    {% if value.title %}<h3 class="text-lg font-semibold mb-2">{{ value.title }}</h3>{% endif %}
+    <div class="prose max-w-none">{{ value.text|richtext }}</div>
+  </div>
+</div>
+
+
+
+
+

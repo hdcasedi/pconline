@@ -5,7 +5,7 @@ from wagtail.fields import StreamField
 from wagtail.admin.panels import FieldPanel
 from wagtail.blocks import (
     StructBlock, CharBlock, ChoiceBlock, RichTextBlock,
-    BooleanBlock, TextBlock, StreamBlock
+    BooleanBlock, TextBlock, StreamBlock, URLBlock
 )
 from wagtail.contrib.table_block.blocks import TableBlock
 from wagtail.admin.forms import WagtailAdminPageForm
@@ -25,6 +25,9 @@ class ParagrapheBlock(StructBlock):
             ('exemple', 'Exemple'),
             ('remarque', 'Remarque'),
             ('definition', 'Définition'),
+            ('etape', 'Étape'),
+            ('protocole', 'Protocole'),
+            ('methode', 'Méthode'),
         ],
         default='normal',
         label="Style",
@@ -105,6 +108,7 @@ class TwoColsBlock(StructBlock):
         default="50-50",
         label="Disposition"
     )
+    video_url = URLBlock(required=False, label="URL vidéo")
 
     left = StreamBlock(
         [
@@ -135,6 +139,7 @@ class TwoColsBlock(StructBlock):
 
 # === NEW: Section 3 colonnes (33/33/33) ===
 class ThreeColsBlock(StructBlock):
+    video_url = URLBlock(required=False, label="URL vidéo")
     col1 = StreamBlock(
         [
             ("paragraphe", ParagrapheBlock()),

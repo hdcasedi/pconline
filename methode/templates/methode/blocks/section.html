@@ -1,0 +1,47 @@
+{% load wagtailcore_tags %}
+{% load static %}
+
+{% with layout=value.layout %}
+<section class="relative border border-slate-200 rounded-lg p-4">
+  {% if value.video_url %}
+  <button class="absolute top-2 right-2" @click="window.dispatchEvent(new CustomEvent('open-video', { detail: '{{ value.video_url }}' }))" aria-label="Ouvrir la vidéo">
+    <img src="https://physiquechimie.online/media/images/lecteur-video.original.png" alt="Vidéo" class="w-12 h-12 drop-shadow" style="width: 48px; height: 48px;" />
+  </button>
+  {% endif %}
+
+  {% if layout == '50_50' %}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>{% include_block value.left %}</div>
+    <div>{% include_block value.right %}</div>
+  </div>
+
+  {% elif layout == '70_30' %}
+  <div class="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
+    <div>{% include_block value.left %}</div>
+    <div>{% include_block value.right %}</div>
+  </div>
+
+  {% elif layout == '30_70' %}
+  <div class="grid grid-cols-1 md:grid-cols-[3fr_7fr] gap-4">
+    <div>{% include_block value.left %}</div>
+    <div>{% include_block value.right %}</div>
+  </div>
+
+  {% elif layout == '33_33_33' %}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>{% include_block value.left %}</div>
+    <div>{% include_block value.right %}</div>
+    <div>{% include_block value.extra %}</div>
+  </div>
+
+  {% elif layout == '100_50_50' %}
+  <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr] gap-4">
+    <div class="md:col-span-3 md:[grid-column:1/4]">{% include_block value.left %}</div>
+    <div>{% include_block value.right %}</div>
+    <div>{% include_block value.extra %}</div>
+  </div>
+  {% endif %}
+</section>
+{% endwith %}
+
+

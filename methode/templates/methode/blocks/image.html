@@ -1,0 +1,12 @@
+{% load wagtailimages_tags %}
+<figure class="my-2">
+  {% image value.image width-1200 class="rounded" %}
+  {% if value.caption %}
+  <figcaption class="text-sm text-slate-500 mt-1">{{ value.caption }}</figcaption>
+  {% endif %}
+</figure>
+
+
+
+
+
