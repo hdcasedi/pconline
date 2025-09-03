@@ -328,6 +328,8 @@ class CoursPage(Page):
                 kwargs['parent_page'] = parent
         return kwargs
 
+
+
     class Meta:
         verbose_name = "Cours"
 
@@ -376,6 +378,8 @@ class CoursPage(Page):
                 except Exception:
                     continue
         return cards
+
+
 
     def random_cards_with_definitions(self, limit=10):
         """

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hub-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 30px;
+    }
+    
+    .tab {
+        padding: 15px 30px;
+        background: #f9fafb;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        color: #6b7280;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+    }
+    
+    .tab.active {
+        background: white;
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+    }
+    
+    .tab:hover {
+        background: #f3f4f6;
+    }
+    
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .generator-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .generator-card h3 {
+        color: #1f2937;
+        margin-bottom: 15px;
+        font-size: 24px;
+    }
+    
+    .generator-card p {
+        color: #6b7280;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    
+    .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #3b82f6;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn:hover {
+        background: #2563eb;
+        transform: translateY(-1px);
+    }
+    
+    .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    .feature {
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 6px;
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .feature h4 {
+        color: #1f2937;
+        margin-bottom: 10px;
+    }
+    
+    .feature p {
+        color: #6b7280;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hub-container" x-data="{ activeTab: 'ds' }">
+    <h1>{{ page.title }}</h1>
+    
+    {% if page.introduction %}
+        <div class="introduction">
+            {{ page.introduction|linebreaks }}
+        </div>
+    {% endif %}
+    
+    <!-- Test de débogage -->
+    <div style="background: yellow; padding: 10px; margin: 10px 0;">
+        <strong>DEBUG:</strong> Alpine.js fonctionne si vous voyez ce message. 
+        Onglet actif: <span x-text="activeTab"></span>
+    </div>
+    
+    <!-- Onglets -->
+    <div class="tabs">
+        <button class="tab" 
+                :class="{ 'active': activeTab === 'ds' }"
+                @click="activeTab = 'ds'">
+            Générateur de devoirs surveillés
+        </button>
+        <button class="tab" 
+                :class="{ 'active': activeTab === 'serie' }"
+                @click="activeTab = 'serie'">
+            Générateur de séries d'exercices
+        </button>
+    </div>
+    
+    <!-- Contenu onglet DS -->
+    <div class="tab-content" :class="{ 'active': activeTab === 'ds' }">
+        <div class="generator-card">
+            <h3>Générateur de devoirs surveillés</h3>
+            <p>
+                Créez automatiquement des devoirs surveillés complets avec énoncé et correction.
+                Le générateur sélectionne intelligemment les exercices, QCM et questions-réponses
+                selon vos critères et génère deux PDF : l'énoncé pour les élèves et la correction pour vous.
+            </p>
+            
+            <div class="features">
+                <div class="feature">
+                    <h4>🎯 Sélection automatique</h4>
+                    <p>Exercices, QCM et questions-réponses sélectionnés selon le niveau et les chapitres</p>
+                </div>
+                <div class="feature">
+                    <h4>⚖️ Barème équilibré</h4>
+                    <p>Répartition automatique des points pour atteindre le barème global souhaité</p>
+                </div>
+                <div class="feature">
+                    <h4>📄 PDF professionnels</h4>
+                    <p>Mise en page LaTeX avec entête personnalisable et options d'affichage</p>
+                </div>
+                <div class="feature">
+                    <h4>🔄 Équilibrage par chapitre</h4>
+                    <p>Option pour répartir équitablement les questions entre les chapitres</p>
+                </div>
+            </div>
+            
+            <a href="/generateurs/ds/" class="btn">
+                Commencer un devoir surveillé
+            </a>
+        </div>
+    </div>
+    
+    <!-- Contenu onglet Série -->
+    <div class="tab-content" :class="{ 'active': activeTab === 'serie' }">
+        <div class="generator-card">
+            <h3>Générateur de séries d'exercices</h3>
+            <p>
+                Générez des séries d'exercices pour l'entraînement et la révision.
+                Sélectionnez les quantités souhaitées d'exercices par niveau, QCM et questions-réponses.
+                Idéal pour les devoirs à la maison et les révisions.
+            </p>
+            
+            <div class="features">
+                <div class="feature">
+                    <h4>📊 Quantités personnalisables</h4>
+                    <p>Définissez exactement le nombre d'exercices de chaque type souhaité</p>
+                </div>
+                <div class="feature">
+                    <h4>🎓 Niveaux de difficulté</h4>
+                    <p>Exercices niveau 1, 2 et 3 pour adapter la difficulté à votre classe</p>
+                </div>
+                <div class="feature">
+                    <h4>📝 Format simple</h4>
+                    <p>PDF énoncé uniquement, sans barème, pour l'entraînement</p>
+                </div>
+                <div class="feature">
+                    <h4>⚡ Génération rapide</h4>
+                    <p>Création instantanée de séries d'exercices personnalisées</p>
+                </div>
+            </div>
+            
+            <a href="/generateurs/serie/" class="btn">
+                Créer une série d'exercices
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

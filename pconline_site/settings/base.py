@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "kahoot",
     "exo",
     "methode",
+    "generateurs",
     "wagtail.contrib.table_block",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",

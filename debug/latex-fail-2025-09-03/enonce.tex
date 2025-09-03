@@ -1,0 +1,185 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\geometry{margin=2cm}
+
+% Définition des variables
+
+% Lignes optionnelles: n'ajoute pas \\ si l'argument est vide
+\newcommand{\MaybeLine}[1]{\if\relax\detokenize{#1}\relax\else #1\\\fi}
+\newcommand{\MaybeBoldLine}[1]{\if\relax\detokenize{#1}\relax\else \textbf{#1}\\\fi}
+
+% Définitions sûres puis surcharge en une seule ligne
+\providecommand{\ecoleLigneUn}{}\providecommand{\ecoleLigneDeux}{}\providecommand{\ecoleLigneTrois}{}
+\providecommand{\titreDevoir}{Contrôle}\providecommand{\sousTitreUn}{}\providecommand{\sousTitreDeux}{}
+\renewcommand{\ecoleLigneUn}{  }% 
+\renewcommand{\ecoleLigneDeux}{  }% 
+\renewcommand{\ecoleLigneTrois}{  }% 
+\renewcommand{\titreDevoir}{ Contrôle }% 
+\renewcommand{\sousTitreUn}{  }% 
+\renewcommand{\sousTitreDeux}{  }% 
+% Barème global: défaut + override en une seule ligne
+\providecommand{\baremeGlobal}{20}
+\renewcommand{\baremeGlobal}{ 20 }%
+\newcommand{\baremeGlobal}{ 20 }
+
+\begin{document}
+
+% En-tête avec 3 zones
+\begin{minipage}[t]{0.25\textwidth}
+    % Zone gauche : Texte école
+    \begin{center}
+      \MaybeBoldLine{\ecoleLigneUn}
+      \MaybeLine{\ecoleLigneDeux}
+      \MaybeLine{\ecoleLigneTrois}
+    \end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.5\textwidth}
+    % Zone centrale : Titre et sous-titres
+    \begin{center}
+        \Large\textbf{\titreDevoir}\\[0.5cm]
+        \MaybeLine{\sousTitreUn}
+        \MaybeLine{\sousTitreDeux}
+    \end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.25\textwidth}
+    % Zone droite : Carré avec diagonale
+    \begin{tikzpicture}[scale=0.8]
+        \draw[thick] (0,0) -- (3,0) -- (3,3) -- (0,3) -- cycle;
+        \draw[thick] (0,0) -- (3,3);
+        \node[anchor=center] at (1.5,2.5) {Note / ...};
+        \node[anchor=center] at (1.5,0.5) {Barème : \baremeGlobal};
+    \end{tikzpicture}
+\end{minipage}
+
+\vspace{1cm}
+
+% Sommaire si demandé
+
+\section*{Sommaire}
+
+EXERCICE 1 :  ( points,  min)
+
+EXERCICE 2 :  ( points,  min)
+
+EXERCICE 3 :  ( points,  min)
+
+EXERCICE 4 :  ( points,  min)
+
+EXERCICE 5 :  ( points,  min)
+
+\vspace{0.5cm}
+
+
+% Contenu principal
+
+\section*{EXERCICE 1 : }
+
+
+\begin{minipage}[t]{0.9\textwidth}
+
+
+\end{minipage}
+
+
+\begin{minipage}[t]{0.1\textwidth}
+\vspace{0pt}
+\begin{center}
+\framebox{\parbox{0.8\textwidth}{\centering  pts}}
+\end{center}
+\end{minipage}
+
+
+\vspace{0.5cm}
+
+\section*{EXERCICE 2 : }
+
+
+\begin{minipage}[t]{0.9\textwidth}
+
+
+\end{minipage}
+
+
+\begin{minipage}[t]{0.1\textwidth}
+\vspace{0pt}
+\begin{center}
+\framebox{\parbox{0.8\textwidth}{\centering  pts}}
+\end{center}
+\end{minipage}
+
+
+\vspace{0.5cm}
+
+\section*{EXERCICE 3 : }
+
+
+\begin{minipage}[t]{0.9\textwidth}
+
+
+\end{minipage}
+
+
+\begin{minipage}[t]{0.1\textwidth}
+\vspace{0pt}
+\begin{center}
+\framebox{\parbox{0.8\textwidth}{\centering  pts}}
+\end{center}
+\end{minipage}
+
+
+\vspace{0.5cm}
+
+\section*{EXERCICE 4 : }
+
+
+\begin{minipage}[t]{0.9\textwidth}
+
+
+\end{minipage}
+
+
+\begin{minipage}[t]{0.1\textwidth}
+\vspace{0pt}
+\begin{center}
+\framebox{\parbox{0.8\textwidth}{\centering  pts}}
+\end{center}
+\end{minipage}
+
+
+\vspace{0.5cm}
+
+\section*{EXERCICE 5 : }
+
+
+\begin{minipage}[t]{0.9\textwidth}
+
+
+\end{minipage}
+
+
+\begin{minipage}[t]{0.1\textwidth}
+\vspace{0pt}
+\begin{center}
+\framebox{\parbox{0.8\textwidth}{\centering  pts}}
+\end{center}
+\end{minipage}
+
+
+\vspace{0.5cm}
+
+
+\end{document}

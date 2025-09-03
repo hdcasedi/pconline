@@ -1,0 +1,127 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <base href="{{ origin_url }}">
+  <title>{{ header.titre|default:"Contrôle" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="{{ tailwind_url }}" rel="stylesheet">
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      loader: { load: ['[tex]/mhchem'] },
+      tex: { packages: { '[+]': ['mhchem'] }, inlineMath: [['$', '$'], ['\\(', '\\)']] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
+  <style>
+    /* --- ENTÊTE SANS TAILWIND --- */
+    .hdr { border:1px solid #000; border-radius:6px; overflow:hidden; }
+    .hdr-row { display:grid; grid-template-columns:28mm 1fr 28mm; align-items:stretch; }
+    .hdr-left, .hdr-right { position:relative; height:28mm; display:flex; align-items:center; justify-content:center; }
+    .hdr-left { border-right:1px solid #000; text-align:center; padding:4mm 2mm; }
+    .hdr-center { display:grid; place-items:center; padding:3mm 4mm; text-align:center; }
+    .hdr-title { font-size:20pt; font-weight:800; line-height:1.1; margin:0; }
+    .hdr-sub { font-size:11pt; margin:2mm 0 0 0; }
+    .hdr-right { border-left:1px solid #000; }
+    .hdr-diag { position:absolute; inset:0; background:linear-gradient(135deg,transparent 49.5%, rgba(0,0,0,.2) 50%, transparent 50.5%); }
+    .hdr-bar { border-top:1px solid #000; text-align:center; padding:2mm 0; font-size:10pt; }
+    @page { size: A4; margin: 15mm 12mm; }
+    /* Fallback layouts si Tailwind absent */
+    .s100{display:block}
+    .s50_50{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .s70_30{display:grid;grid-template-columns:7fr 3fr;gap:1rem}
+    /* Lignes question 90/10 + barre verticale (pour le HTML généré par selection.py) */
+    .q-row{display:grid;grid-template-columns:90% 10%;gap:16px;align-items:start}
+    .q-left{display:flex;gap:.5rem;align-items:baseline}
+    .q-num{font-weight:700}
+    .q-text{flex:1 1 auto}
+    .q-bar{border-left:1px solid #000;padding-left:8px;font-weight:700}
+    /* QCM propositions en 2 colonnes */
+    .qcm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px}
+    .qcm-choice{display:flex;align-items:baseline;gap:8px}
+    .qcm-letter{width:1.6rem;flex:0 0 1.6rem;text-align:center;font-weight:700}
+    .qcm-answer{flex:1 1 auto;overflow-wrap:anywhere}
+    /* Masquer les <summary> en énoncé (pas de flèche) */
+    details{display:block}
+    details>summary{display:none}
+    details>*:not(summary){display:none}
+  </style>
+</head>
+<body class="max-w-none text-[13pt] leading-relaxed">
+
+  <!-- ENTÊTE RECTANGLE 3 ZONES (CSS pur) -->
+  <div class="hdr">
+    <div class="hdr-row">
+      <div class="hdr-left">
+        {% if branding.logo_url %}
+          <img src="{{ branding.logo_url }}" alt="Logo" style="max-height:24mm;max-width:24mm;object-fit:contain;">
+        {% else %}
+          <div style="font-size:11pt;line-height:1.1">
+            <div>{{ branding.ecole_l1|default:"Physique" }}</div>
+            <div>{{ branding.ecole_l2|default:"Chimie" }}</div>
+            <div>{{ branding.ecole_l3|default:"Online" }}</div>
+          </div>
+        {% endif %}
+      </div>
+      <div class="hdr-center">
+        <div>
+          <h1 class="hdr-title">{{ header.titre|default:"Contrôle" }}</h1>
+          {% if header.sous_titre_1 %}<div class="hdr-sub">{{ header.sous_titre_1 }}</div>{% endif %}
+          {% if header.sous_titre_2 %}<div class="hdr-sub">{{ header.sous_titre_2 }}</div>{% endif %}
+        </div>
+      </div>
+      <div>
+        <div class="hdr-right"><div class="hdr-diag"></div></div>
+        <div class="hdr-bar">Barème : {{ header.bareme_global|default:20 }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% if qcms %}
+    <h2 class="mt-6 font-bold text-xl">EXERCICE I : Questions de cours</h2>
+    <h3 class="mt-2 font-semibold">a) QCM – choisir la bonne réponse</h3>
+
+    <ol class="list-none pl-0 mt-3 space-y-3">
+      {% for q in qcms %}
+        <li>
+          <!-- Ligne question + barème à droite -->
+          <div class="grid grid-cols-10 gap-4 items-baseline">
+            <div class="col-span-9 flex gap-2 items-baseline">
+              <span class="font-bold">{{ forloop.counter }}.</span>
+              <div class="min-w-0">{{ q.question_html|safe }}</div>
+            </div>
+            <div class="col-span-1 border-l pl-2 font-bold">{% if q.points %}/{{ q.points }}{% endif %}</div>
+          </div>
+
+          <!-- Propositions en 2 colonnes -->
+          {% if q.choices %}
+            <div class="qcm-grid mt-2">
+              {% for choice in q.choices|slice:":4" %}
+                <div class="qcm-choice">
+                  <span class="qcm-letter">
+                    {% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}
+                  </span>
+                  <span class="qcm-answer">{% autoescape off %}{{ choice }}{% endautoescape %}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  <!-- AUCUNE FC -->
+  <!-- Exercices -->
+  {% with offset=qcms|yesno:"1,0" %}
+    {% for bloc in exercices %}
+      <h2 class="mt-6 font-extrabold text-xl">Exercice n°{{ forloop.counter|add:offset }} : {{ bloc.titre }}</h2>
+      <!-- Le HTML généré contient .q-intro (100%) et .q-row (90/10 avec barre) -->
+      <div class="space-y-2">{% autoescape off %}{{ bloc.html_enonce }}{% endautoescape %}</div>
+    {% endfor %}
+  {% endwith %}
+</body>
+</html>

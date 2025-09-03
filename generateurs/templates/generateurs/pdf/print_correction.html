@@ -1,0 +1,125 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <base href="{{ origin_url }}">
+  <title>Correction – {{ header.titre|default:"Contrôle" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="{{ tailwind_url }}" rel="stylesheet">
+
+  <script>
+    window.MathJax = {
+      loader: { load: ['[tex]/mhchem'] },
+      tex: { packages: { '[+]': ['mhchem'] }, inlineMath: [['$', '$'], ['\\(', '\\)']] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
+  <style>
+    @page { size: A4; margin: 15mm 12mm; }
+    /* --- ENTÊTE SANS TAILWIND --- */
+    .hdr { border:1px solid #000; border-radius:6px; overflow:hidden; }
+    .hdr-row { display:grid; grid-template-columns:28mm 1fr 28mm; align-items:stretch; }
+    .hdr-left, .hdr-right { position:relative; height:28mm; display:flex; align-items:center; justify-content:center; }
+    .hdr-left { border-right:1px solid #000; text-align:center; padding:4mm 2mm; }
+    .hdr-center { display:grid; place-items:center; padding:3mm 4mm; text-align:center; }
+    .hdr-title { font-size:20pt; font-weight:800; line-height:1.1; margin:0; }
+    .hdr-sub { font-size:11pt; margin:2mm 0 0 0; }
+    .hdr-right { border-left:1px solid #000; }
+    .hdr-diag { position:absolute; inset:0; background:linear-gradient(135deg,transparent 49.5%, rgba(0,0,0,.2) 50%, transparent 50.5%); }
+    .hdr-bar { border-top:1px solid #000; text-align:center; padding:2mm 0; font-size:10pt; }
+    /* Fallbacks */
+    .s100{display:block}.s50_50{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .s70_30{display:grid;grid-template-columns:7fr 3fr;gap:1rem}
+    .q-row{display:grid;grid-template-columns:90% 10%;gap:16px;align-items:start}
+    .q-left{display:flex;gap:.5rem;align-items:baseline}
+    .q-num{font-weight:700}.q-text{flex:1 1 auto}
+    .q-bar{border-left:1px solid #000;padding-left:8px;font-weight:700}
+    .ans-green{color:#16a34a}
+    .qcm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px}
+    .qcm-choice{display:flex;align-items:baseline;gap:8px;border:1px solid #d1d5db;border-radius:6px;padding:6px 8px}
+    .qcm-choice.correct{border-color:#16a34a;border-width:2px}
+    .qcm-letter{width:1.6rem;flex:0 0 1.6rem;text-align:center;font-weight:700}
+    .qcm-answer{flex:1 1 auto;overflow-wrap:anywhere}
+    details{display:block}
+    details>summary{display:none!important}
+    details[open]>*:not(summary),details>*:not(summary){display:block!important}
+  </style>
+</head>
+<body class="max-w-none text-[13pt] leading-relaxed">
+
+  <!-- ENTÊTE identique -->
+  <div class="w-full border rounded overflow-hidden">
+    <div class="flex items-stretch">
+      <div class="relative w-28 h-28 border-r flex items-center justify-center p-2 text-center">
+        {% if branding.logo_url %}
+          <img src="{{ branding.logo_url }}" alt="Logo" class="max-h-24 max-w-24 object-contain mx-auto">
+        {% else %}
+          <div class="text-sm leading-snug">
+            <div>{{ branding.ecole_l1|default:"Physique" }}</div>
+            <div>{{ branding.ecole_l2|default:"Chimie" }}</div>
+            <div>{{ branding.ecole_l3|default:"Online" }}</div>
+          </div>
+        {% endif %}
+      </div>
+      <div class="flex-1 grid place-items-center px-4 py-2 text-center">
+        <div>
+          <div class="text-2xl font-extrabold">CORRECTION – {{ header.titre|default:"Contrôle" }}</div>
+          {% if header.sous_titre_1 %}<div class="text-base mt-1">{{ header.sous_titre_1 }}</div>{% endif %}
+          {% if header.sous_titre_2 %}<div class="text-base">{{ header.sous_titre_2 }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="w-28">
+        <div class="relative h-28 border-l">
+          <div class="absolute inset-0" style="background: linear-gradient(135deg, transparent 49.5%, rgba(0,0,0,0.2) 50%, transparent 50.5%);"></div>
+        </div>
+        <div class="text-center text-sm py-1 border-t">
+          Barème : {{ header.bareme_global|default:20 }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if qcms %}
+    <h2 class="mt-6 font-bold text-xl">EXERCICE I : Questions de cours — Correction</h2>
+    <h3 class="mt-2 font-semibold">a) QCM</h3>
+
+    <ol class="list-none pl-0 mt-3 space-y-3">
+      {% for q in qcms %}
+        <li>
+          <!-- Ligne question + barème -->
+          <div class="grid grid-cols-10 gap-4 items-baseline">
+            <div class="col-span-9 flex gap-2 items-baseline">
+              <span class="font-bold">{{ forloop.counter }}.</span>
+              <div class="min-w-0">{{ q.question_html|safe }}</div>
+            </div>
+            <div class="col-span-1 border-l pl-2 font-bold">{% if q.points %}/{{ q.points }}{% endif %}</div>
+          </div>
+
+          {% if q.choices %}
+            <div class="qcm-grid mt-2">
+              {% for choice in q.choices|slice:":4" %}
+                <div class="qcm-choice {% if forloop.counter0 == q.correct_answer %}correct{% endif %}">
+                  <span class="qcm-letter">
+                    {% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}
+                  </span>
+                  <span class="qcm-answer">{% autoescape off %}{{ choice }}{% endautoescape %}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  <!-- AUCUNE FC -->
+  {% with offset=qcms|yesno:"1,0" %}
+    {% for bloc in exercices %}
+      <h2 class="mt-6 font-extrabold text-xl">Exercice n°{{ forloop.counter|add:offset }} : {{ bloc.titre }}</h2>
+      <!-- html_correction contient les solutions (en vert) et les 90/10 -->
+      <div class="space-y-2">{% autoescape off %}{{ bloc.html_correction }}{% endautoescape %}</div>
+    {% endfor %}
+  {% endwith %}
+</body>
+</html>

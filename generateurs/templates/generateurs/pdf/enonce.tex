@@ -1,0 +1,90 @@
+{% load latex_filters %}
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\geometry{margin=2cm}
+
+% ---- Macros par défaut (UNE seule fois)
+\input{macros.tex}
+
+% ---- Overrides (UNE seule fois aussi)
+\renewcommand{\titreDevoir}{ {{ params.titre|default:"Contrôle"|trim|texescape }} }
+\renewcommand{\sousTitreUn}{ {{ params.sous_titre_1|default_if_none:''|trim|texescape }} }
+\renewcommand{\sousTitreDeux}{ {{ params.sous_titre_2|default_if_none:''|trim|texescape }} }
+\renewcommand{\baremeGlobal}{ {{ params.bareme_global|default:"20"|trim }} }
+
+\begin{document}
+
+% --- Bloc école (plus de \\ si vide)
+\begin{minipage}[t]{0.25\textwidth}
+\begin{center}
+  {% if branding.ecole_l1|default_if_none:''|trim %}\textbf{ {{ branding.ecole_l1|default_if_none:''|trim|texescape }} }\\{% endif %}
+  {% if branding.ecole_l2|default_if_none:''|trim %}{{ branding.ecole_l2|default_if_none:''|trim|texescape }}\\{% endif %}
+  {% if branding.ecole_l3|default_if_none:''|trim %}{{ branding.ecole_l3|default_if_none:''|trim|texescape }}{% endif %}
+\end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.5\textwidth}
+    % Zone centrale : Titre et sous-titres
+    \begin{center}
+        \Large\textbf{\titreDevoir}\\[0.5cm]
+        {% if params.sous_titre_1|default_if_none:''|trim %}\sousTitreUn\\{% endif %}
+        {% if params.sous_titre_2|default_if_none:''|trim %}\sousTitreDeux\\{% endif %}
+    \end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.25\textwidth}
+    % Zone droite : Carré avec diagonale
+    \begin{tikzpicture}[scale=0.8]
+        \draw[thick] (0,0) -- (3,0) -- (3,3) -- (0,3) -- cycle;
+        \draw[thick] (0,0) -- (3,3);
+        \node[anchor=center] at (1.5,2.5) {Note / ...};
+        \node[anchor=center] at (1.5,0.5) {Barème : \baremeGlobal};
+    \end{tikzpicture}
+\end{minipage}
+
+\vspace{1cm}
+
+% Sommaire si demandé
+{% if params.afficher_bareme %}
+\section*{Sommaire}
+{% for item in content %}
+EXERCICE {{ forloop.counter }} : {{ item.titre }} ({{ item.points }} points, {{ item.duree }} min)
+{% endfor %}
+\vspace{0.5cm}
+{% endif %}
+
+% Contenu principal
+{% for item in content %}
+\section*{EXERCICE {{ forloop.counter }} : {{ item.titre }}}
+
+{% if params.afficher_bareme %}
+\begin{minipage}[t]{0.9\textwidth}
+{% else %}
+\begin{minipage}[t]{1\textwidth}
+{% endif %}
+{{ item.enonce|richtext_to_latex }}
+\end{minipage}
+
+{% if params.afficher_bareme %}
+\begin{minipage}[t]{0.1\textwidth}
+\vspace{0pt}
+\begin{center}
+\framebox{\parbox{0.8\textwidth}{\centering {{ item.points }} pts}}
+\end{center}
+\end{minipage}
+{% endif %}
+
+\vspace{0.5cm}
+{% endfor %}
+
+\end{document}

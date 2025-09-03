@@ -1,0 +1,65 @@
+{% load latex_filters %}
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\geometry{margin=2cm}
+
+% ---- Macros par défaut (UNE seule fois)
+\input{macros.tex}
+
+% ---- Overrides (UNE seule fois aussi)
+\renewcommand{\titreSerie}{ {{ params.titre|default:"Série d'exercices"|trim|texescape }} }
+\renewcommand{\sousTitreUn}{ {{ params.sous_titre_1|default_if_none:''|trim|texescape }} }
+\renewcommand{\sousTitreDeux}{ {{ params.sous_titre_2|default_if_none:''|trim|texescape }} }
+
+\begin{document}
+
+% --- Bloc école (plus de \\ si vide)
+\begin{minipage}[t]{0.25\textwidth}
+\begin{center}
+  {% if branding.ecole_l1|default_if_none:''|trim %}\textbf{ {{ branding.ecole_l1|default_if_none:''|trim|texescape }} }\\{% endif %}
+  {% if branding.ecole_l2|default_if_none:''|trim %}{{ branding.ecole_l2|default_if_none:''|trim|texescape }}\\{% endif %}
+  {% if branding.ecole_l3|default_if_none:''|trim %}{{ branding.ecole_l3|default_if_none:''|trim|texescape }}{% endif %}
+\end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.5\textwidth}
+    % Zone centrale : Titre et sous-titres
+    \begin{center}
+        \Large\textbf{\titreSerie}\\[0.5cm]
+        {% if params.sous_titre_1|default_if_none:''|trim %}\sousTitreUn\\{% endif %}
+        {% if params.sous_titre_2|default_if_none:''|trim %}\sousTitreDeux\\{% endif %}
+    \end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.25\textwidth}
+    % Zone droite : Cartouche Nom/Classe/Date
+    \begin{tikzpicture}[scale=0.8]
+        \draw[thick] (0,0) -- (3,0) -- (3,3) -- (0,3) -- cycle;
+        \node[anchor=center] at (1.5,2.5) {Nom :};
+        \node[anchor=center] at (1.5,1.5) {Classe :};
+        \node[anchor=center] at (1.5,0.5) {Date :};
+    \end{tikzpicture}
+\end{minipage}
+
+\vspace{1cm}
+
+% Contenu principal (pleine largeur, pas de barème)
+{% for item in content %}
+\section*{EXERCICE {{ forloop.counter }} : {{ item.titre }}}
+
+{{ item.enonce|richtext_to_latex }}
+
+\vspace{0.5cm}
+{% endfor %}
+
+\end{document}

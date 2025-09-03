@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stepper-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        position: relative;
+    }
+    
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e5e7eb;
+        z-index: 1;
+    }
+    
+    .step {
+        position: relative;
+        z-index: 2;
+        background: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 2px solid #e5e7eb;
+        transition: all 0.3s;
+    }
+    
+    .step.active {
+        border-color: #3b82f6;
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .step.completed {
+        border-color: #10b981;
+        background: #10b981;
+        color: white;
+    }
+    
+    .step-content {
+        display: none;
+        animation: fadeIn 0.3s;
+    }
+    
+    .step-content.active {
+        display: block;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+    
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+    
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #059669;
+    }
+    
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .step-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+    }
+    
+    .settings-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    
+    .settings-content {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .loading.active {
+        display: block;
+    }
+    
+    .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3b82f6;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="stepper-container" x-data="serieGenerator()">
+    <!-- Bouton paramètres -->
+    <div class="text-right mb-4">
+        <button @click="showSettings = true" class="btn btn-secondary">
+            ⚙️ Paramètres
+        </button>
+    </div>
+    
+    <!-- Indicateur d'étapes -->
+    <div class="step-indicator">
+        <div class="step" :class="getStepClass(1)">
+            <span>1</span>
+        </div>
+        <div class="step" :class="getStepClass(2)">
+            <span>2</span>
+        </div>
+        <div class="step" :class="getStepClass(3)">
+            <span>3</span>
+        </div>
+    </div>
+    
+    <!-- Étape 1: Niveau et chapitres -->
+    <div class="step-content" :class="{ 'active': currentStep === 1 }">
+        <h3>Étape 1: Sélection du niveau et des chapitres</h3>
+        
+        <div class="form-group">
+            <label for="niveau">Niveau :</label>
+            <select id="niveau" x-model="formData.niveau_id" class="form-control">
+                <option value="">Sélectionnez un niveau</option>
+                {% for niveau in niveaux %}
+                <option value="{{ niveau.id }}">{{ niveau.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Chapitres :</label>
+            <div class="chapitres-grid">
+                {% for chapitre in chapitres %}
+                <div class="checkbox-group">
+                    <input type="checkbox" 
+                           id="chapitre_{{ chapitre.id }}" 
+                           value="{{ chapitre.id }}"
+                           x-model="formData.chapitre_ids">
+                    <label for="chapitre_{{ chapitre.id }}">
+                        {{ chapitre.theme.niveau.nom }} | {{ chapitre.theme.nom }} | {{ chapitre.numero }}. {{ chapitre.titre }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Étape 2: Entête -->
+    <div class="step-content" :class="{ 'active': currentStep === 2 }">
+        <h3>Étape 2: Entête</h3>
+        
+        <div class="form-group">
+            <label for="titre">Titre de la série :</label>
+            <input type="text" id="titre" x-model="formData.titre" class="form-control" value="Série d'exercices">
+        </div>
+        
+        <div class="form-group">
+            <label for="sous_titre_1">Sous-titre 1 (chapitres/thèmes) :</label>
+            <input type="text" id="sous_titre_1" x-model="formData.sous_titre_1" class="form-control">
+        </div>
+        
+        <div class="form-group">
+            <label for="sous_titre_2">Sous-titre 2 :</label>
+            <input type="text" id="sous_titre_2" x-model="formData.sous_titre_2" class="form-control">
+        </div>
+    </div>
+    
+    <!-- Étape 3: Quantités -->
+    <div class="step-content" :class="{ 'active': currentStep === 3 }">
+        <h3>Étape 3: Quantités</h3>
+        
+        <div class="form-group">
+            <label for="nb_qcm">Nombre de QCM :</label>
+            <input type="number" id="nb_qcm" x-model="formData.nb_qcm" class="form-control" value="0" min="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="nb_fc">Nombre de questions-réponses :</label>
+            <input type="number" id="nb_fc" x-model="formData.nb_fc" class="form-control" value="0" min="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="nb_ex_lvl1">Nombre d'exercices niveau 1 :</label>
+            <input type="number" id="nb_ex_lvl1" x-model="formData.nb_ex_lvl1" class="form-control" value="0" min="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="nb_ex_lvl2">Nombre d'exercices niveau 2 :</label>
+            <input type="number" id="nb_ex_lvl2" x-model="formData.nb_ex_lvl2" class="form-control" value="0" min="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="nb_ex_lvl3">Nombre d'exercices niveau 3 :</label>
+            <input type="number" id="nb_ex_lvl3" x-model="formData.nb_ex_lvl3" class="form-control" value="0" min="0">
+        </div>
+        
+        <div class="form-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="equilibrer_par_chapitre" x-model="formData.equilibrer_par_chapitre">
+                <label for="equilibrer_par_chapitre">Équilibrer par chapitre</label>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Boutons de navigation -->
+    <div class="step-buttons">
+        <button @click="previousStep()" 
+                class="btn btn-secondary" 
+                :disabled="currentStep === 1">
+            Précédent
+        </button>
+        
+        <button @click="nextStep()" 
+                class="btn btn-primary" 
+                x-show="currentStep < 3"
+                :disabled="!canProceed()">
+            Suivant
+        </button>
+        
+        <button @click="generatePDF()" 
+                class="btn btn-success" 
+                x-show="currentStep === 3"
+                :disabled="!canGenerate()">
+            Générer
+        </button>
+    </div>
+    
+    <!-- Loading -->
+    <div class="loading" :class="{ 'active': loading }">
+        <div class="spinner"></div>
+        <p>Génération en cours...</p>
+    </div>
+    
+    <!-- Modal paramètres -->
+    <div class="settings-modal" x-show="showSettings" @click.self="showSettings = false">
+        <div class="settings-content">
+            <h3>Paramètres de marque</h3>
+            
+            <div class="form-group">
+                <label for="logo">Logo de l'établissement :</label>
+                <input type="file" id="logo" accept="image/*" @change="handleLogoChange($event)">
+            </div>
+            
+            <div class="form-group">
+                <label for="ecole_l1">Ligne 1 - Nom de l'établissement :</label>
+                <input type="text" id="ecole_l1" x-model="brandingData.ecole_l1" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="ecole_l2">Ligne 2 - Adresse :</label>
+                <input type="text" id="ecole_l2" x-model="brandingData.ecole_l2" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="ecole_l3">Ligne 3 - Ville/Code postal :</label>
+                <input type="text" id="ecole_l3" x-model="brandingData.ecole_l3" class="form-control">
+            </div>
+            
+            <div class="text-right">
+                <button @click="saveBranding()" class="btn btn-primary">Sauvegarder</button>
+                <button @click="showSettings = false" class="btn btn-secondary">Annuler</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function serieGenerator() {
+    return {
+        currentStep: 1,
+        loading: false,
+        showSettings: false,
+        formData: {
+            niveau_id: '',
+            chapitre_ids: [],
+            titre: 'Série d\'exercices',
+            sous_titre_1: '',
+            sous_titre_2: '',
+            nb_qcm: 0,
+            nb_fc: 0,
+            nb_ex_lvl1: 0,
+            nb_ex_lvl2: 0,
+            nb_ex_lvl3: 0,
+            equilibrer_par_chapitre: true
+        },
+        brandingData: {
+            logo_id: null,
+            ecole_l1: '',
+            ecole_l2: '',
+            ecole_l3: ''
+        },
+        
+        getStepClass(step) {
+            if (this.currentStep === step) return 'active';
+            if (this.currentStep > step) return 'completed';
+            return '';
+        },
+        
+        canProceed() {
+            if (this.currentStep === 1) {
+                return this.formData.niveau_id && this.formData.chapitre_ids.length > 0;
+            }
+            return true;
+        },
+        
+        canGenerate() {
+            return this.canProceed() && this.currentStep === 3;
+        },
+        
+        nextStep() {
+            if (this.canProceed() && this.currentStep < 3) {
+                this.currentStep++;
+            }
+        },
+        
+        previousStep() {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+            }
+        },
+        
+        async generatePDF() {
+            if (!this.canGenerate()) return;
+            
+            this.loading = true;
+            
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (!csrfToken) {
+                    throw new Error('Token CSRF non trouvé');
+                }
+                
+                const response = await fetch('{% url "generateurs:generate_serie_pdf" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken.value
+                    },
+                    body: JSON.stringify(this.formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Ouvrir le PDF dans un nouvel onglet
+                    window.open(result.enonce_url, '_blank');
+                } else {
+                    alert('Erreur lors de la génération : ' + (result.error || 'Erreur inconnue'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la génération : ' + error.message);
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        handleLogoChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Ici vous devriez uploader le fichier et récupérer l'ID
+                // Pour l'instant, on simule
+                this.brandingData.logo_id = null;
+            }
+        },
+        
+        async saveBranding() {
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (!csrfToken) {
+                    throw new Error('Token CSRF non trouvé');
+                }
+                
+                const response = await fetch('{% url "generateurs:update_branding" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken.value
+                    },
+                    body: JSON.stringify(this.brandingData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.showSettings = false;
+                    alert('Paramètres sauvegardés avec succès');
+                } else {
+                    alert('Erreur lors de la sauvegarde : ' + (result.error || 'Erreur inconnue'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde : ' + error.message);
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

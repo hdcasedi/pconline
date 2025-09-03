@@ -1,9 +1,11 @@
 from django.urls import path
+from . import views
 
 app_name = 'flashcard'
 
 urlpatterns = [
-    # URLs will be handled by Wagtail
+    path('chapitre/<int:chapitre_id>/', views.flashcards_chapitre, name='flashcards_chapitre'),
+    path('chapitre/<int:chapitre_id>/json/', views.flashcards_chapitre_json, name='flashcards_chapitre_json'),
 ]
 
 
