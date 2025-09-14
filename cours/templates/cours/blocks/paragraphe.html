@@ -34,65 +34,142 @@
     padding: 0.75rem;
     margin: 0.5rem 0;
   }
+  
+  /* Images avec alignement selon le paragraphe */
+  .paragraphe-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0.5rem auto;
+  }
+  
+  /* Alignement des images selon l'alignement du paragraphe */
+  .paragraphe-content.align-centre img {
+    margin: 0.5rem auto !important;
+  }
+  
+  .paragraphe-content.align-droite img {
+    margin: 0.5rem 0 0.5rem auto !important;
+  }
+  
+  .paragraphe-content.align-gauche img {
+    margin: 0.5rem auto 0.5rem 0 !important;
+  }
+  
+  .paragraphe-content.align-justifie img {
+    margin: 0.5rem auto !important;
+  }
+  
+  /* Centrage vertical et horizontal pour justifié */
+  .paragraphe-content.align-justifie {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    text-align: center;
+  }
 </style>
 
 {% if value.style == 'normal' %}
-  <div class="mb-4 paragraphe-content text-{{ value.alignement }}">
-    {{ value.contenu|richtext }}
-  </div>
+  {% if value.alignement == 'justifie' %}
+    <div class="mb-4 paragraphe-content align-justifie">
+      {{ value.contenu|richtext }}
+    </div>
+  {% else %}
+    <div class="mb-4 paragraphe-content text-{{ value.alignement }} align-{{ value.alignement }}">
+      {{ value.contenu|richtext }}
+    </div>
+  {% endif %}
 {% elif value.style == 'exemple' %}
   <div class="mb-4 p-4 bg-white border-l-4 border-green-800 rounded-r toggleable-content exemple-block" style="display: none;">
     <div class="font-semibold text-green-800 mb-2">
       {% if value.titre %}{{ value.titre }}{% else %}exemple{% endif %}
     </div>
-    <div class="paragraphe-content text-{{ value.alignement }}">
-      {{ value.contenu|richtext }}
-    </div>
+    {% if value.alignement == 'justifie' %}
+      <div class="paragraphe-content align-justifie">
+        {{ value.contenu|richtext }}
+      </div>
+    {% else %}
+      <div class="paragraphe-content text-{{ value.alignement }} align-{{ value.alignement }}">
+        {{ value.contenu|richtext }}
+      </div>
+    {% endif %}
   </div>
 {% elif value.style == 'remarque' %}
-  <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r toggleable-content remarque-block" style="display: none;">
+  <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
     <div class="font-semibold text-yellow-800 mb-2">
       {% if value.titre %}{{ value.titre }}{% else %}Remarque{% endif %}
     </div>
-    <div class="paragraphe-content text-{{ value.alignement }}">
-      {{ value.contenu|richtext }}
-    </div>
+    {% if value.alignement == 'justifie' %}
+      <div class="paragraphe-content align-justifie">
+        {{ value.contenu|richtext }}
+      </div>
+    {% else %}
+      <div class="paragraphe-content text-{{ value.alignement }} align-{{ value.alignement }}">
+        {{ value.contenu|richtext }}
+      </div>
+    {% endif %}
   </div>
 {% elif value.style == 'definition' %}
   <div class="mb-4 p-4 bg-blue-100 border-l-4 border-blue-600 rounded-r">
     <div class="font-semibold text-blue-600 mb-2">
       {% if value.titre %}{{ value.titre }}{% else %}Définition{% endif %}
     </div>
-    <div class="paragraphe-content text-{{ value.alignement }}">
-      {{ value.contenu|richtext }}
-    </div>
+    {% if value.alignement == 'justifie' %}
+      <div class="paragraphe-content align-justifie">
+        {{ value.contenu|richtext }}
+      </div>
+    {% else %}
+      <div class="paragraphe-content text-{{ value.alignement }} align-{{ value.alignement }}">
+        {{ value.contenu|richtext }}
+      </div>
+    {% endif %}
   </div>
 {% elif value.style == 'etape' %}
   <div class="mb-4 p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-r">
     <div class="font-semibold text-indigo-700 mb-2">
       {% if value.titre %}{{ value.titre }}{% else %}Étape{% endif %}
     </div>
-    <div class="paragraphe-content text-{{ value.alignement }}">
-      {{ value.contenu|richtext }}
-    </div>
+    {% if value.alignement == 'justifie' %}
+      <div class="paragraphe-content align-justifie">
+        {{ value.contenu|richtext }}
+      </div>
+    {% else %}
+      <div class="paragraphe-content text-{{ value.alignement }} align-{{ value.alignement }}">
+        {{ value.contenu|richtext }}
+      </div>
+    {% endif %}
   </div>
 {% elif value.style == 'protocole' %}
   <div class="mb-4 p-4 bg-emerald-50 border-l-4 border-emerald-600 rounded-r">
     <div class="font-semibold text-emerald-700 mb-2">
       {% if value.titre %}{{ value.titre }}{% else %}Protocole{% endif %}
     </div>
-    <div class="paragraphe-content text-{{ value.alignement }}">
-      {{ value.contenu|richtext }}
-    </div>
+    {% if value.alignement == 'justifie' %}
+      <div class="paragraphe-content align-justifie">
+        {{ value.contenu|richtext }}
+      </div>
+    {% else %}
+      <div class="paragraphe-content text-{{ value.alignement }} align-{{ value.alignement }}">
+        {{ value.contenu|richtext }}
+      </div>
+    {% endif %}
   </div>
 {% elif value.style == 'methode' %}
   <div class="mb-4 p-4 bg-fuchsia-50 border-l-4 border-fuchsia-600 rounded-r">
     <div class="font-semibold text-fuchsia-700 mb-2">
       {% if value.titre %}{{ value.titre }}{% else %}Méthode{% endif %}
     </div>
-    <div class="paragraphe-content text-{{ value.alignement }}">
-      {{ value.contenu|richtext }}
-    </div>
+    {% if value.alignement == 'justifie' %}
+      <div class="paragraphe-content align-justifie">
+        {{ value.contenu|richtext }}
+      </div>
+    {% else %}
+      <div class="paragraphe-content text-{{ value.alignement }} align-{{ value.alignement }}">
+        {{ value.contenu|richtext }}
+      </div>
+    {% endif %}
   </div>
 {% elif value.style == 'formulaire' %}
   <div class="formulaire-content">
@@ -100,7 +177,7 @@
       {% if value.titre %}{{ value.titre }}{% else %}Formulaire{% endif %}
     </div>
     <div class="formulaire-inner">
-      <div class="paragraphe-content text-{{ value.alignement }}">
+      <div class="paragraphe-content align-{{ value.alignement }}">
         {{ value.contenu|richtext }}
       </div>
     </div>

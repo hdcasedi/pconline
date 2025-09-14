@@ -1,0 +1,33 @@
+{% load wagtailcore_tags %}
+
+{% if table.data %}
+<div class="w-full mb-6 rounded-lg overflow-hidden border border-blue-200 bg-blue-50">
+  <table class="min-w-full border-collapse w-full">
+    <thead class="bg-blue-600">
+      <tr>
+        {% for head in table.data.0 %}
+          <th class="px-4 py-3 text-center text-sm font-semibold text-white border-b border-blue-700">
+            {{ head|richtext }}
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for row in table.data|slice:"1:" %}
+        <tr class="{% cycle 'bg-blue-100' 'bg-blue-50' %} hover:bg-blue-200">
+          {% for cell in row %}
+            <td class="px-4 py-3 text-sm text-gray-800 text-center border-b border-blue-200">
+              {{ cell|richtext }}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+if (window.MathJax) { MathJax.typesetPromise(); }
+</script>

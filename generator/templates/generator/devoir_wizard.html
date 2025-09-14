@@ -1,0 +1,608 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<h1 class="text-2xl font-bold">Générateur de Devoir</h1>
+<p class="text-slate-600">Assistant en 5 étapes, navigation par boutons.</p>
+
+<div id="wizard" class="mt-6 space-y-6">
+
+  <!-- === Étape A === -->
+  <section data-step="A" class="step">
+    <h2 class="text-xl font-semibold">Étape 1 – Choisir les chapitres</h2>
+    <div class="mt-4">
+      <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
+          {% for niveau_nom in chapters_structure.keys %}
+          <button type="button"
+                  class="niveau-tab whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 {% if forloop.first %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}"
+                  data-niveau="{{ niveau_nom }}">
+            <span class="hidden sm:inline">{{ niveau_nom }}</span>
+            <span class="sm:hidden">{{ niveau_nom|slice:":3" }}</span>
+          </button>
+          {% endfor %}
+        </nav>
+      </div>
+      <div id="themesContainer" class="hidden mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Chapitres disponibles</label>
+        <div id="themesList" class="space-y-6"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === Étape B === -->
+  <section data-step="B" class="step">
+    <h2 class="text-xl font-semibold">Étape 2 – Type de sortie</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+      <!-- Gauche -->
+      <div class="space-y-4">
+        <div>
+          <label class="block mb-1">Type</label>
+          <select id="type_sortie" class="border rounded p-2 w-full">
+            <option value="ds">DS</option>
+            <option value="serie">Série d'exercice</option>
+          </select>
+        </div>
+        <div>
+          <label class="block mb-1">Titre</label>
+          <input id="titre" class="border rounded p-2 w-full" placeholder="Devoir" />
+        </div>
+        <div id="ds_soustexts" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block mb-1">Sous-titre 1</label>
+            <input id="sous_titre_1" class="border rounded p-2 w-full" />
+          </div>
+          <div>
+            <label class="block mb-1">Sous-titre 2</label>
+            <input id="sous_titre_2" class="border rounded p-2 w-full" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Droite -->
+      <div class="space-y-4">
+        <div id="ds_bareme_box">
+          <label class="block mb-1">Barème global</label>
+          <input id="bareme_global" type="number" value="20" class="border rounded p-2 w-full" />
+        </div>
+        <div class="grid grid-cols-1 gap-2">
+          <label class="inline-flex items-center gap-2">
+            <input id="show_bareme_total" type="checkbox" class="h-4 w-4" checked />
+            <span>Afficher barème total</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input id="show_bareme_exo" type="checkbox" class="h-4 w-4" checked />
+            <span>Afficher barème par exercice</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input id="show_duree" type="checkbox" class="h-4 w-4" checked />
+            <span>Afficher durée estimée</span>
+          </label>
+        </div>
+        <button id="btnHeaderConfig" type="button" class="px-4 py-2 rounded border border-slate-300">Paramétrer l’entête</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- === Étape C === -->
+  <section data-step="C" class="step">
+    <h2 class="text-xl font-semibold">Étape 3 – Composition</h2>
+
+    <!-- Panneau DS -->
+    <div id="step3_ds_panel" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-6">
+        <!-- QCM -->
+        <div class="border p-4 rounded-lg">
+          <div class="flex justify-between mb-2">
+            <h3 class="font-medium">QCM</h3>
+            <label class="inline-flex items-center text-sm">
+              <input id="ds_qcm_enable" type="checkbox" class="h-4 w-4" />
+              <span>Activer</span>
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input id="ds_qcm_min" type="number" value="0" class="border rounded p-2" placeholder="Min" />
+            <input id="ds_qcm_max" type="number" value="10" class="border rounded p-2" placeholder="Max" />
+            <select id="ds_qcm_point" class="border rounded p-2">
+              <option value="1">1 pt</option>
+              <option value="0.5">0,5 pt</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Réponses libres -->
+        <div class="border p-4 rounded-lg">
+          <div class="flex justify-between mb-2">
+            <h3 class="font-medium">Questions libres</h3>
+            <label class="inline-flex items-center text-sm">
+              <input id="ds_qr_enable" type="checkbox" class="h-4 w-4" />
+              <span>Activer</span>
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input id="ds_qr_min" type="number" value="0" class="border rounded p-2" placeholder="Min" />
+            <input id="ds_qr_max" type="number" value="10" class="border rounded p-2" placeholder="Max" />
+            <select id="ds_qr_point" class="border rounded p-2">
+              <option value="1">1 pt</option>
+              <option value="0.5">0,5 pt</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exercices -->
+      <div class="border p-4 rounded-lg">
+        <h3 class="font-medium mb-3">Exercices</h3>
+        <label class="flex items-center gap-2 mb-2">
+          <input id="ds_exo_application_enable" type="checkbox" class="h-4 w-4" checked />
+          <span>Application</span>
+        </label>
+        <label class="flex items-center gap-2 mb-2">
+          <input id="ds_exo_entrainement_enable" type="checkbox" class="h-4 w-4" checked />
+          <span>Entraînement</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <input id="ds_exo_approfondissement_enable" type="checkbox" class="h-4 w-4" checked />
+          <span>Approfondissement</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Panneau Série -->
+    <div id="step3_serie_panel" class="hidden mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="border p-4 rounded-lg">
+        <h3 class="font-medium mb-3">Questions de cours</h3>
+        <label class="block text-sm">QCM</label>
+        <input id="serie_qcm_count" type="number" value="0" class="border rounded p-2 w-full mb-2" />
+        <label class="block text-sm">Réponses libres</label>
+        <input id="serie_qr_count" type="number" value="0" class="border rounded p-2 w-full" />
+      </div>
+      <div class="border p-4 rounded-lg">
+        <h3 class="font-medium mb-3">Exercices</h3>
+        <input id="serie_exo_application_count" type="number" value="0" class="border rounded p-2 w-full mb-2" placeholder="Application" />
+        <input id="serie_exo_entrainement_count" type="number" value="0" class="border rounded p-2 w-full mb-2" placeholder="Entraînement" />
+        <input id="serie_exo_approfondissement_count" type="number" value="0" class="border rounded p-2 w-full" placeholder="Approfondissement" />
+      </div>
+    </div>
+  </section>
+
+  <!-- === Étape D === -->
+  <section data-step="D" class="step">
+    <h2 class="text-xl font-semibold">Étape 4 – Options</h2>
+    <div class="mt-4 flex flex-col gap-2">
+      <label class="inline-flex items-center gap-2">
+        <input id="equilibrer" type="checkbox" class="h-4 w-4" checked />
+        <span>Équilibrer par chapitre</span>
+      </label>
+      <label class="inline-flex items-center gap-2">
+        <input id="masquer_fc" type="checkbox" class="h-4 w-4" />
+        <span>Masquer les flashcards</span>
+      </label>
+    </div>
+    <div class="mt-4 flex gap-3">
+      <button id="btnPdfEnonce" type="button" class="px-4 py-2 rounded bg-blue-600 text-white">Énoncé PDF</button>
+      <button id="btnPdfCorrection" type="button" class="px-4 py-2 rounded bg-slate-700 text-white">Correction PDF</button>
+      <button id="btnVoirQcm" type="button" class="px-4 py-2 rounded border border-blue-600 text-blue-600">Voir QCM</button>
+    </div>
+  </section>
+
+  <!-- === Étape E === -->
+  <section data-step="E" class="step">
+    <h2 class="text-xl font-semibold">Étape 5 – Récapitulatif</h2>
+    <pre id="recap" class="mt-4 bg-slate-50 border border-slate-200 rounded p-3 text-sm overflow-auto"></pre>
+  </section>
+
+  <!-- Navigation -->
+  <div class="flex justify-between pt-4 border-t border-slate-200">
+    <button id="btnPrev" class="px-4 py-2 rounded border border-slate-300">Retour</button>
+    <button id="btnNext" class="px-4 py-2 rounded bg-blue-600 text-white">Continuer</button>
+  </div>
+</div>
+
+
+<script>
+  // État simple en mémoire
+  const state = {
+    stepKeys: ['A','B','C','D','E'],
+    idx: 0,
+    payload: {
+      niveau_id: null,
+      chapitre_ids: [],
+      type: 'ds',
+      titre: 'Devoir',
+      bareme_global: 20,
+      sous_titre_1: '',
+      sous_titre_2: '',
+      afficher_bareme_total: true,
+      afficher_bareme_par_exercice: true,
+      afficher_duree_temps: true,
+      // Étape 3 – DS
+      ds_qcm_enable: false,
+      ds_qcm_min: 0,
+      ds_qcm_max: 10,
+      ds_qcm_point: 1,
+      ds_qr_enable: false,
+      ds_qr_min: 0,
+      ds_qr_max: 10,
+      ds_qr_point: 1,
+      ds_exo_application_enable: true,
+      ds_exo_entrainement_enable: true,
+      ds_exo_approfondissement_enable: true,
+      // Étape 3 – Série
+      serie_qcm_count: 0,
+      serie_qr_count: 0,
+      serie_exo_application_count: 0,
+      serie_exo_entrainement_count: 0,
+      serie_exo_approfondissement_count: 0,
+      header_logo_url: 'https://physiquechimie.online/media/images/logo.original.png',
+      header_line1: 'PHYSIQUE CHIMIE ONLINE',
+      header_line2: '',
+      header_line3: '',
+      qcm_min: 0, qcm_max: 6,
+      ex_lvl1_min: 0, ex_lvl1_max: 2,
+      ex_lvl2_min: 0, ex_lvl2_max: 2,
+      ex_lvl3_min: 0, ex_lvl3_max: 2,
+      equilibrer_par_chapitre: true,
+      masquer_fc: true,
+      seed: 12345,
+    }
+  };
+
+  function showStep(){
+    document.querySelectorAll('#wizard .step').forEach(s=>s.classList.add('hidden'));
+    const key = state.stepKeys[state.idx];
+    const sec = document.querySelector(`#wizard [data-step="${key}"]`);
+    if(sec) sec.classList.remove('hidden');
+    document.getElementById('btnPrev').disabled = state.idx === 0;
+    document.getElementById('btnNext').textContent = state.idx === state.stepKeys.length-1 ? 'Terminer' : 'Continuer';
+    if(key === 'B') { try { prefillSubtitle2FromChapters(); } catch(e) {} }
+    if(key === 'E') fillRecap();
+  }
+
+  // Reprise logique QuizzUp
+  const chaptersStructure = {{ chapters_structure|safe }};
+  const niveauTabs = document.querySelectorAll('.niveau-tab');
+  const themesContainer = document.getElementById('themesContainer');
+  const themesList = document.getElementById('themesList');
+  let currentNiveau = null;
+
+  niveauTabs.forEach(tab => {
+    tab.addEventListener('click', function(){
+      const niveau = this.dataset.niveau;
+      niveauTabs.forEach(t=>{ t.classList.remove('border-blue-500','text-blue-600'); t.classList.add('border-transparent','text-gray-500'); });
+      this.classList.remove('border-transparent','text-gray-500');
+      this.classList.add('border-blue-500','text-blue-600');
+      if(niveau && chaptersStructure[niveau]){ currentNiveau = niveau; loadThemes(niveau); themesContainer.classList.remove('hidden'); }
+      else { themesContainer.classList.add('hidden'); }
+    });
+  });
+
+  function loadThemes(niveau){
+    const themes = chaptersStructure[niveau];
+    themesList.innerHTML = '';
+    Object.keys(themes).forEach(themeName => {
+      const themeDiv = document.createElement('div');
+      themeDiv.className = 'border border-gray-200 rounded-lg p-4';
+      const themeHeader = document.createElement('div');
+      themeHeader.className = 'flex items-center mb-4';
+      const themeCheckbox = document.createElement('input');
+      themeCheckbox.type = 'checkbox';
+      themeCheckbox.className = 'theme-checkbox mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500';
+      themeCheckbox.dataset.theme = themeName;
+      const themeLabel = document.createElement('label');
+      themeLabel.className = 'font-medium text-gray-800 text-lg';
+      themeLabel.textContent = themeName;
+      themeHeader.appendChild(themeCheckbox);
+      themeHeader.appendChild(themeLabel);
+      const chaptersGrid = document.createElement('div');
+      chaptersGrid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+      themes[themeName].forEach(chapitre => {
+        const chapterCard = document.createElement('div');
+        chapterCard.className = 'border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer';
+        const chapterCheckbox = document.createElement('input');
+        chapterCheckbox.type = 'checkbox';
+        chapterCheckbox.className = 'chapter-checkbox sr-only';
+        chapterCheckbox.dataset.chapterId = chapitre.id;
+        chapterCheckbox.dataset.theme = themeName;
+        const cardContent = document.createElement('div');
+        cardContent.className = 'text-center h-full flex flex-col justify-center';
+        const chapterTitle = document.createElement('div');
+        chapterTitle.className = 'text-sm font-medium text-gray-800 leading-tight';
+        chapterTitle.style.display = '-webkit-box';
+        chapterTitle.style.webkitLineClamp = '2';
+        chapterTitle.style.webkitBoxOrient = 'vertical';
+        chapterTitle.style.overflow = 'hidden';
+        chapterTitle.textContent = chapitre.titre;
+        cardContent.appendChild(chapterTitle);
+        chapterCard.appendChild(chapterCheckbox);
+        chapterCard.appendChild(cardContent);
+        chapterCard.addEventListener('click', function(){
+          chapterCheckbox.checked = !chapterCheckbox.checked;
+          updateCardStyle(chapterCard, chapterCheckbox.checked);
+        });
+        chaptersGrid.appendChild(chapterCard);
+      });
+      themeDiv.appendChild(themeHeader);
+      themeDiv.appendChild(chaptersGrid);
+      themesList.appendChild(themeDiv);
+    });
+    document.querySelectorAll('.theme-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', function(){
+        const themeName = this.dataset.theme;
+        const isChecked = this.checked;
+        document.querySelectorAll(`.chapter-checkbox[data-theme="${themeName}"]`).forEach(chapterCheckbox => {
+          chapterCheckbox.checked = isChecked;
+          const card = chapterCheckbox.closest('.border');
+          updateCardStyle(card, isChecked);
+        });
+      });
+    });
+  }
+
+  function buildChapterIndex(){
+    const idx = {};
+    try {
+      const niveaux = chaptersStructure || {};
+      Object.keys(niveaux).forEach(niv => {
+        const themes = niveaux[niv] || {};
+        Object.keys(themes).forEach(themeName => {
+          const chapitres = themes[themeName] || [];
+          chapitres.forEach(ch => { if(ch && typeof ch.id !== 'undefined') idx[ch.id] = ch.titre || String(ch.id); });
+        });
+      });
+    } catch(e){}
+    return idx;
+  }
+
+  function prefillSubtitle2FromChapters(){
+    const ids = Array.isArray(state.payload.chapitre_ids) ? state.payload.chapitre_ids : [];
+    if(ids.length === 0) return;
+    const idToTitle = buildChapterIndex();
+    const titles = ids.map(id => idToTitle[id]).filter(Boolean);
+    if(titles.length === 0) return;
+    const joined = titles.join(' | ');
+    const st2 = document.getElementById('sous_titre_2');
+    if(st2 && (!st2.value || st2.value.trim() === '')){
+      st2.value = joined;
+    }
+    if(!state.payload.header_line2 || String(state.payload.header_line2).trim() === ''){
+      state.payload.header_line2 = joined;
+    }
+  }
+
+  function updateCardStyle(card, isChecked){
+    if (isChecked) {
+      card.classList.remove('border-gray-200', 'hover:border-blue-300');
+      card.classList.add('border-blue-500', 'bg-blue-50');
+    } else {
+      card.classList.remove('border-blue-500', 'bg-blue-50');
+      card.classList.add('border-gray-200', 'hover:border-blue-300');
+    }
+  }
+
+  function captureStep(){
+    const key = state.stepKeys[state.idx];
+    if(key === 'A'){
+      const selectedChapters = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb=>parseInt(cb.dataset.chapterId));
+      if(selectedChapters.length === 0){
+        alert('Sélectionne au moins un chapitre.');
+        return false;
+      }
+      state.payload.chapitre_ids = selectedChapters;
+    } else if(key === 'B'){
+      state.payload.type = document.getElementById('type_sortie').value || 'ds';
+      state.payload.titre = document.getElementById('titre').value || (state.payload.type==='ds' ? 'Devoir' : "Série d'exercice");
+      state.payload.bareme_global = parseFloat(document.getElementById('bareme_global').value) || 20;
+      state.payload.sous_titre_1 = document.getElementById('sous_titre_1')?.value || '';
+      state.payload.sous_titre_2 = document.getElementById('sous_titre_2')?.value || '';
+      state.payload.afficher_bareme_total = !!document.getElementById('show_bareme_total').checked;
+      state.payload.afficher_bareme_par_exercice = !!document.getElementById('show_bareme_exo').checked;
+      state.payload.afficher_duree_temps = !!document.getElementById('show_duree').checked;
+      // Capture modale entête si présente
+      const hl = document.getElementById('modal_header_logo_url');
+      const l1 = document.getElementById('modal_header_line1');
+      const l2 = document.getElementById('modal_header_line2');
+      const l3 = document.getElementById('modal_header_line3');
+      if(hl) state.payload.header_logo_url = hl.value || state.payload.header_logo_url;
+      if(l1) state.payload.header_line1 = l1.value || state.payload.header_line1;
+      if(l2) state.payload.header_line2 = l2.value || state.payload.header_line2;
+      if(l3) state.payload.header_line3 = l3.value || state.payload.header_line3;
+    } else if(key === 'C'){
+      const isDS = (state.payload.type === 'ds');
+      if(isDS){
+        state.payload.ds_qcm_enable = !!document.getElementById('ds_qcm_enable').checked;
+        state.payload.ds_qcm_min = parseInt(document.getElementById('ds_qcm_min').value)||0;
+        state.payload.ds_qcm_max = parseInt(document.getElementById('ds_qcm_max').value)||0;
+        state.payload.ds_qcm_point = parseFloat(document.getElementById('ds_qcm_point').value)||1;
+        state.payload.ds_qr_enable = !!document.getElementById('ds_qr_enable').checked;
+        state.payload.ds_qr_min = parseInt(document.getElementById('ds_qr_min').value)||0;
+        state.payload.ds_qr_max = parseInt(document.getElementById('ds_qr_max').value)||0;
+        state.payload.ds_qr_point = parseFloat(document.getElementById('ds_qr_point').value)||1;
+        state.payload.ds_exo_application_enable = !!document.getElementById('ds_exo_application_enable').checked;
+        state.payload.ds_exo_entrainement_enable = !!document.getElementById('ds_exo_entrainement_enable').checked;
+        state.payload.ds_exo_approfondissement_enable = !!document.getElementById('ds_exo_approfondissement_enable').checked;
+      } else {
+        state.payload.serie_qcm_count = parseInt(document.getElementById('serie_qcm_count').value)||0;
+        state.payload.serie_qr_count = parseInt(document.getElementById('serie_qr_count').value)||0;
+        state.payload.serie_exo_application_count = parseInt(document.getElementById('serie_exo_application_count').value)||0;
+        state.payload.serie_exo_entrainement_count = parseInt(document.getElementById('serie_exo_entrainement_count').value)||0;
+        state.payload.serie_exo_approfondissement_count = parseInt(document.getElementById('serie_exo_approfondissement_count').value)||0;
+      }
+    } else if(key === 'D'){
+      state.payload.equilibrer_par_chapitre = !!document.getElementById('equilibrer').checked;
+      state.payload.masquer_fc = !!document.getElementById('masquer_fc').checked;
+    }
+    return true;
+  }
+
+  function fillRecap(){
+    const pre = document.getElementById('recap');
+    pre.textContent = JSON.stringify(state.payload, null, 2);
+  }
+
+  // === Build PDF (énoncé / correction) via /generator/pdf/<mode>/ ===
+  async function buildPdf(mode){
+    if(!captureStep()) return;
+    // graine unique pour varier les variantes (exos, QCM, etc.)
+    state.payload.seed = String(Date.now());
+    const res = await fetch('/generator/payload/save/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state.payload)
+    }).then(r=>r.json()).catch(()=>({ok:false}));
+    if(!res || !res.ok){
+      alert('Erreur de sauvegarde du payload');
+      return;
+    }
+    window.open(`/generator/pdf/${mode}/`, '_blank');
+  }
+
+  document.getElementById('btnPrev').addEventListener('click', ()=>{ if(state.idx>0){ state.idx--; showStep(); }});
+  document.getElementById('btnNext').addEventListener('click', ()=>{
+    if(!captureStep()) return;
+    if(state.idx < state.stepKeys.length-1){ state.idx++; showStep(); }
+    else alert('Assistant terminé.');
+  });
+
+  // Actions PDF étape 4 (nouveau branchement)
+  document.getElementById('btnPdfEnonce').addEventListener('click', ()=>buildPdf('enonce'));
+  document.getElementById('btnPdfCorrection').addEventListener('click', ()=>buildPdf('correction'));
+
+  // Preview QCM
+  const btnVoirQcm = document.getElementById('btnVoirQcm');
+  if (btnVoirQcm) {
+    btnVoirQcm.addEventListener('click', function () {
+      if (!captureStep()) return;
+      state.payload.seed = String(Date.now());
+      fetch('/generator/payload/save/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state.payload)
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.ok) {
+          const isDS = (state.payload.type === 'ds');
+          let n = isDS ? (parseInt(state.payload.ds_qcm_max) || 0)
+                       : (parseInt(state.payload.serie_qcm_count) || 0);
+          if (!n || n < 1) { n = parseInt(state.payload.qcm_max) || 10; }
+          let point = isDS ? (parseFloat(state.payload.ds_qcm_point) || 1) : 1;
+          if (point !== 1 && point !== 0.5) point = 1;
+          const url = `/generator/qcm/preview/?n_qcm=${encodeURIComponent(n)}&point=${encodeURIComponent(point)}&seed=${encodeURIComponent(state.payload.seed)}`;
+          window.open(url, '_blank');
+        } else {
+          alert('Erreur de sauvegarde du payload');
+        }
+      })
+      .catch(() => alert('Erreur réseau lors de la sauvegarde du payload'));
+    });
+  }
+
+  // Init
+  showStep();
+  // Dynamique DS/Série
+  const typeSelect = document.getElementById('type_sortie');
+  const dsBoxes = {
+    baremeBox: document.getElementById('ds_bareme_box'),
+    sousTexts: document.getElementById('ds_soustexts')
+  };
+  function refreshTypeUI(){
+    const isDS = (typeSelect.value === 'ds');
+    const titreInput = document.getElementById('titre');
+    const DS_DEFAULT = 'Devoir';
+    const SERIE_DEFAULT = "Série d'exercice";
+    titreInput.placeholder = isDS ? DS_DEFAULT : SERIE_DEFAULT;
+    const current = (titreInput.value || '').trim();
+    if(isDS){
+      if(current === '' || current === SERIE_DEFAULT){
+        titreInput.value = DS_DEFAULT;
+      }
+    } else {
+      if(current === '' || current === DS_DEFAULT){
+        titreInput.value = SERIE_DEFAULT;
+      }
+    }
+    dsBoxes.baremeBox.classList.toggle('hidden', !isDS);
+    const dsPanel = document.getElementById('step3_ds_panel');
+    const seriePanel = document.getElementById('step3_serie_panel');
+    if(dsPanel && seriePanel){
+      dsPanel.classList.toggle('hidden', !isDS);
+      seriePanel.classList.toggle('hidden', isDS);
+    }
+  }
+  typeSelect.addEventListener('change', refreshTypeUI);
+  refreshTypeUI();
+
+  document.addEventListener('DOMContentLoaded', function(){
+    const tabs = document.querySelectorAll('.niveau-tab');
+    if(tabs.length>0){ tabs[0].click(); }
+  });
+
+  // ================= Modale Paramétrer l'entête =================
+  const modalHtml = `
+    <div id="headerModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+      <div class="bg-white rounded-lg w-full max-w-lg p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">Paramétrer l’entête</h3>
+          <button id="headerCloseBtn" class="text-slate-500 hover:text-slate-700">✕</button>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block mb-1">Logo (URL)</label>
+            <input id="modal_header_logo_url" type="text" class="border rounded p-2 w-full" value="${state.payload.header_logo_url}" />
+            <p class="text-xs text-slate-500 mt-1">Par défaut: <code>https://physiquechimie.online/media/images/logo.original.png</code></p>
+          </div>
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="block mb-1">Ligne 1</label>
+              <input id="modal_header_line1" type="text" class="border rounded p-2 w-full" value="${state.payload.header_line1}" />
+            </div>
+            <div>
+              <label class="block mb-1">Ligne 2</label>
+              <input id="modal_header_line2" type="text" class="border rounded p-2 w-full" value="${state.payload.header_line2}" />
+            </div>
+            <div>
+              <label class="block mb-1">Ligne 3</label>
+              <input id="modal_header_line3" type="text" class="border rounded p-2 w-full" value="${state.payload.header_line3}" />
+            </div>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+          <button id="headerCancelBtn" type="button" class="px-4 py-2 rounded border border-slate-300">Annuler</button>
+          <button id="headerSaveBtn" type="button" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Enregistrer</button>
+        </div>
+      </div>
+    </div>`;
+  const modalContainer = document.createElement('div');
+  modalContainer.innerHTML = modalHtml;
+  document.body.appendChild(modalContainer);
+
+  function openHeaderModal(){
+    const m = document.getElementById('headerModal');
+    if(!m) return;
+    document.getElementById('modal_header_logo_url').value = state.payload.header_logo_url || 'https://physiquechimie.online/media/images/logo.original.png';
+    document.getElementById('modal_header_line1').value = state.payload.header_line1 || 'PHYSIQUE CHIMIE ONLINE';
+    document.getElementById('modal_header_line2').value = state.payload.header_line2 || '';
+    document.getElementById('modal_header_line3').value = state.payload.header_line3 || '';
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+  }
+  function closeHeaderModal(){
+    const m = document.getElementById('headerModal');
+    if(!m) return;
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+  }
+  document.getElementById('btnHeaderConfig').addEventListener('click', openHeaderModal);
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.id === 'headerCloseBtn'){ closeHeaderModal(); }
+    if(e.target && e.target.id === 'headerCancelBtn'){ closeHeaderModal(); }
+    if(e.target && e.target.id === 'headerSaveBtn'){
+      state.payload.header_logo_url = document.getElementById('modal_header_logo_url').value || 'https://physiquechimie.online/media/images/logo.original.png';
+      state.payload.header_line1 = document.getElementById('modal_header_line1').value || 'PHYSIQUE CHIMIE ONLINE';
+      state.payload.header_line2 = document.getElementById('modal_header_line2').value || '';
+      state.payload.header_line3 = document.getElementById('modal_header_line3').value || '';
+      closeHeaderModal();
+    }
+  });
+</script>
+{% endblock %}

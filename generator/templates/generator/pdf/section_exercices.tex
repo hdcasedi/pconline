@@ -1,0 +1,99 @@
+{% load latex %}{% load extras %}{% load param_tags %}
+
+% Compteur des sous-questions par exercice
+\newcounter{exQno}
+
+% Pas de \section* ici : on enchaîne après "Questions de cours"
+
+{% for ex in exercices %}
+  % Passe à l'exercice suivant (2, 3, …)
+  \addtocounter{exoTop}{1}
+  \setcounter{exQno}{0}
+
+  % Ligne de titre alignée comme QCM (90% titre | 10% barème)
+  \noindent
+  \begin{minipage}[t]{0.90\linewidth}
+    \textbf{Exercice \Roman{exoTop} | {{ ex.title|html2tex }}}
+  \end{minipage}%
+  \begin{minipage}[t]{0.10\linewidth}
+    \raggedleft
+    {% if ex.total_points %}\textbf{ ({{ ex.total_points|floatformat:0 }} pt)}{% endif %}
+  \end{minipage}
+  \par\vspace{6pt}
+
+  {% if ex.rendered_blocks %}
+    {% for block in ex.rendered_blocks %}
+      {% if block.block_type == 'enonce' or block.block_type == 's100' %}
+        \noindent {{ block.rendered_html|html2tex }}\vspace{8pt}
+
+      {% elif block.block_type == 's70_30' %}
+        \noindent
+        \begin{minipage}[t]{0.70\linewidth}
+          {{ block.rendered_html|html2tex_no_images }}
+        \end{minipage}%
+        \hspace{0.02\linewidth}%
+        \begin{minipage}[t]{0.28\linewidth}
+          \vspace{-2pt}\centering
+          {% if ex.image_path %}\includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{ {{ ex.image_path }} }{% endif %}
+        \end{minipage}
+        \vspace{8pt}
+
+      {% elif block.block_type == 's50_50' %}
+        \noindent
+        \begin{minipage}[t]{0.48\linewidth}
+          {{ block.rendered_html|html2tex_no_images }}
+        \end{minipage}%
+        \hspace{0.04\linewidth}%
+        \begin{minipage}[t]{0.48\linewidth}
+          \vspace{-2pt}\centering
+          {% if ex.image_path %}\includegraphics[width=\linewidth,height=0.48\textheight,keepaspectratio]{ {{ ex.image_path }} }{% endif %}
+        \end{minipage}
+        \vspace{8pt}
+
+      {% elif block.block_type == 's75_25' %}
+        \noindent
+        \begin{minipage}[t]{0.75\linewidth}
+          {{ block.rendered_html|html2tex_no_images }}
+        \end{minipage}%
+        \hspace{0.01\linewidth}%
+        \begin{minipage}[t]{0.24\linewidth}
+          \vspace{-2pt}\centering
+          {% if ex.image_path %}\includegraphics[width=\linewidth,height=0.24\textheight,keepaspectratio]{ {{ ex.image_path }} }{% endif %}
+        \end{minipage}
+        \vspace{8pt}
+
+      {% elif block.block_type == 'question' %}
+        \refstepcounter{exQno}%
+        \vspace{0.5em}
+        \noindent
+        \begin{minipage}[t]{0.90\linewidth}
+          \textbf{\theexQno. }\ignorespaces
+          {% for child in block.value.content %}{% render_with_params child ex.param_values as qhtml %}{{ qhtml|strip_badges|html2tex }}{% endfor %}
+        \end{minipage}%
+        \hfill
+        \begin{minipage}[t]{0.10\linewidth}
+          \raggedleft
+          {% if block.value.points %}\textbf{ {{ block.value.points|floatformat:0 }} pt}{% endif %}
+        \end{minipage}
+        \par
+        \vspace{1.2em}
+
+        {% if is_correction and block.value.solution %}
+          \noindent\textbf{Solution :}
+          \par\vspace{4pt}
+          {% for child in block.value.solution %}{% render_with_params child ex.param_values as solhtml %}
+            \noindent {{ solhtml|html2tex }}\par
+          {% endfor %}
+          \vspace{8pt}
+        {% endif %}
+
+      {% else %}
+        {{ block.rendered_html|html2tex }}\vspace{4pt}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  \vspace{12pt}
+{% empty %}
+  \noindent\emph{Aucun exercice sélectionné.}
+{% endfor %}

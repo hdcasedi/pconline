@@ -1,0 +1,2051 @@
+===== /srv/pconline/generator/templates/generator/pdf/main.tex =====
+{% load latex %}
+
+\documentclass[12pt,a4paper]{article}
+
+% ===== Encodage & langue =====
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% ===== Mise en page & graphismes =====
+\usepackage{geometry}
+\geometry{top=1.2cm, bottom=2cm, left=2cm, right=2cm}
+\usepackage{graphicx}
+\usepackage{array} % pour >{\raggedleft\arraybackslash} dans tabular
+\usepackage{tikz}
+
+% ===== Divers =====
+\usepackage{hyperref}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+% ===== CHEMISTRY & ROBUSTNESS =====
+% Compteur global des exercices
+\newcounter{exoTop}
+\makeatletter
+% Charger mhchem si pas déjà chargé
+\@ifpackageloaded{mhchem}{}{%
+  \IfFileExists{mhchem.sty}{%
+    \usepackage[version=4]{mhchem}%
+    \typeout{DEBUG: mhchem.sty FOUND -> LOADED}%
+  }{%
+    \typeout{DEBUG: mhchem.sty NOT FOUND -> FALLBACK ACTIVE}%
+  }%
+}
+% Fallback minimal si, pour une raison quelconque, mhchem n'est pas (ou n'a pas pu être) chargé :
+\@ifpackageloaded{mhchem}{%
+  \typeout{DEBUG: mhchem package is loaded at preamble.}%
+}{%
+  \providecommand{\ce}[1]{\textrm{#1}}% rend lisible sans planter
+}
+\makeatother
+
+% Atténue les Overfull \hbox (non bloquant)
+\setlength{\emergencystretch}{2em}
+
+\usepackage[none]{hyphenat}
+\sloppy
+
+% --- Macro standard pour ligne de réponse (flashcards) ---
+\newcommand{\AnswerLine}[1]{%
+  \par\smallskip\noindent\textbf{Réponse : }#1\par%
+}
+
+% ===== Unicode fixes (indices / exposants / symboles courants) =====
+\usepackage{newunicodechar}
+% Mapping Unicode -> LaTeX (grec, symboles courants)
+\DeclareUnicodeCharacter{03BB}{\ensuremath{\lambda}} % λ
+\DeclareUnicodeCharacter{03BC}{\ensuremath{\mu}}     % μ
+\DeclareUnicodeCharacter{03C0}{\ensuremath{\pi}}     % π
+\DeclareUnicodeCharacter{03B1}{\ensuremath{\alpha}}  % α
+\DeclareUnicodeCharacter{03B2}{\ensuremath{\beta}}   % β
+\DeclareUnicodeCharacter{03B3}{\ensuremath{\gamma}}  % γ
+\DeclareUnicodeCharacter{03B4}{\ensuremath{\delta}}  % δ
+\DeclareUnicodeCharacter{03B8}{\ensuremath{\theta}}  % θ
+\DeclareUnicodeCharacter{03C3}{\ensuremath{\sigma}}  % σ
+\DeclareUnicodeCharacter{03C4}{\ensuremath{\tau}}    % τ
+\DeclareUnicodeCharacter{03C6}{\ensuremath{\phi}}    % φ
+\DeclareUnicodeCharacter{03C9}{\ensuremath{\omega}}  % ω
+\DeclareUnicodeCharacter{0394}{\ensuremath{\Delta}}  % Δ
+\DeclareUnicodeCharacter{03A3}{\ensuremath{\Sigma}}  % Σ
+\DeclareUnicodeCharacter{03A9}{\ensuremath{\Omega}}  % Ω
+\DeclareUnicodeCharacter{00B0}{\ensuremath{^\circ}}  % °
+
+% Indices (₀..₉)
+\newunicodechar{₀}{$_0$}
+\newunicodechar{₁}{$_1$}
+\newunicodechar{₂}{$_2$}
+\newunicodechar{₃}{$_3$}
+\newunicodechar{₄}{$_4$}
+\newunicodechar{₅}{$_5$}
+\newunicodechar{₆}{$_6$}
+\newunicodechar{₇}{$_7$}
+\newunicodechar{₈}{$_8$}
+\newunicodechar{₉}{$_9$}
+
+% Exposants (⁰ ¹ ² ³ ⁴..⁹)
+\newunicodechar{⁰}{$^0$}
+\newunicodechar{¹}{$^1$}
+\newunicodechar{²}{$^2$}
+\newunicodechar{³}{$^3$}
+\newunicodechar{⁴}{$^4$}
+\newunicodechar{⁵}{$^5$}
+\newunicodechar{⁶}{$^6$}
+\newunicodechar{⁷}{$^7$}
+\newunicodechar{⁸}{$^8$}
+\newunicodechar{⁹}{$^9$}
+
+% Autres utiles
+\newunicodechar{°}{\textdegree}
+\newunicodechar{µ}{$\mu$}
+\newunicodechar{×}{$\times$}
+\newunicodechar{−}{$-$}  % signe moins U+221
+
+% =========================================================
+% Variables côté Jinja2 -> macros LaTeX attendues par l'entête
+% =========================================================
+% type ds / serie
+% Type DS (booléen LaTeX)
+\newif\ifDS
+{% if type == "ds" %}\DStrue{% else %}\DSfalse{% endif %}
+
+% titre / barème / sous-titres
+\def\titre{ {{ titre|tex }} }
+\def\baremeGlobal{ {{ barreme_obtenu|default:barreme_cible|default:0 }} }
+\def\sousTitreUn{ {{ sous_titre_1|tex }} }
+\def\sousTitreDeux{ {{ sous_titre_2|tex }} }
+
+% --- Logo: flag + chemin (pas d'include si vide) ---
+\newif\ifHAVELOGO
+{% if header_logo_path and header_logo_path != "" %}
+  \HAVELOGOtrue
+{% else %}
+  \HAVELOGOfalse
+{% endif %}
+
+
+
+% Définition du chemin du logo pour header.tex
+\def\headerLogoPath{ {{ header_logo_path|default:"" }} }
+
+% DEBUG: Afficher le chemin du logo
+\typeout{DEBUG: header_logo_path = {{ header_logo_path }}}
+\typeout{DEBUG: headerLogoPath = \headerLogoPath}
+
+% lignes du pavé gauche si pas de logo
+\def\headerLineUn{ {{ header_line1|default:""|tex }} }
+\def\headerLineDeux{ {{ header_line2|default:""|tex }} }
+\def\headerLineTrois{ {{ header_line3|default:""|tex }} }
+
+% classe / nom (tu peux les alimenter via payload si tu veux)
+\def\classe{ {{ classe|default:""|tex }} }
+\def\nomPrenom{ Nom et Prénom : }
+
+% énoncé (0) ou correction (1)
+\def\isCorrection{ {{ isCorrection|default:0 }} }
+
+\begin{document}
+
+% ===== ENTÊTE =====
+\input{header.tex}
+
+% ===== INFORMATION BARÈME AJUSTÉ =====
+{% if barreme_obtenu != barreme_cible %}
+\vspace{0.5cm}
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{
+\centering
+\textbf{Note :} Le barème a été ajusté de {{ barreme_cible }} points à {{ barreme_obtenu }} points\\
+en raison du nombre limité d'exercices disponibles.
+}}
+\end{center}
+\vspace{0.5cm}
+{% endif %}
+
+% ===== SECTION A : QCM =====
+{% if qcms|length > 0 %}
+\input{section_qcm.tex}
+{% endif %}
+
+% ===== SECTION B : Flashcards =====
+{% if flashcards|length > 0 %}
+\input{section_flashcards.tex}
+{% endif %}
+
+% ===== SECTION C : Exercices =====
+{% if exercices|length > 0 %}
+\input{section_exercices.tex}
+{% endif %}
+
+\end{document}
+
+===== /srv/pconline/generator/templates/generator/pdf/section_exercices.tex =====
+{% load latex %}{% load extras %}{% load param_tags %}
+
+% Compteur des sous-questions par exercice
+\newcounter{exQno}
+
+% Pas de \section* ici : on enchaîne après "Questions de cours"
+
+{% for ex in exercices %}
+  % Passe à l'exercice suivant (2, 3, …)
+  \addtocounter{exoTop}{1}
+  \setcounter{exQno}{0}
+
+  % Ligne de titre alignée comme QCM (90% titre | 10% barème)
+  \noindent
+  \begin{minipage}[t]{0.90\linewidth}
+    \textbf{Exercice \Roman{exoTop} | {{ ex.title|html2tex }}}
+  \end{minipage}%
+  \begin{minipage}[t]{0.10\linewidth}
+    \raggedleft
+    {% if ex.total_points %}\textbf{ ({{ ex.total_points|floatformat:0 }} pt)}{% endif %}
+  \end{minipage}
+  \par\vspace{6pt}
+
+  {% if ex.rendered_blocks %}
+    {% for block in ex.rendered_blocks %}
+      {% if block.block_type == 'enonce' or block.block_type == 's100' %}
+        \noindent {{ block.rendered_html|html2tex }}\vspace{8pt}
+
+      {% elif block.block_type == 's70_30' %}
+        \noindent
+        \begin{minipage}[t]{0.70\linewidth}
+          {{ block.rendered_html|html2tex_no_images }}
+        \end{minipage}%
+        \hspace{0.02\linewidth}%
+        \begin{minipage}[t]{0.28\linewidth}
+          \vspace{-2pt}\centering
+          {% if ex.image_path %}\includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{ {{ ex.image_path }} }{% endif %}
+        \end{minipage}
+        \vspace{8pt}
+
+      {% elif block.block_type == 's50_50' %}
+        \noindent
+        \begin{minipage}[t]{0.48\linewidth}
+          {{ block.rendered_html|html2tex_no_images }}
+        \end{minipage}%
+        \hspace{0.04\linewidth}%
+        \begin{minipage}[t]{0.48\linewidth}
+          \vspace{-2pt}\centering
+          {% if ex.image_path %}\includegraphics[width=\linewidth,height=0.48\textheight,keepaspectratio]{ {{ ex.image_path }} }{% endif %}
+        \end{minipage}
+        \vspace{8pt}
+
+      {% elif block.block_type == 's75_25' %}
+        \noindent
+        \begin{minipage}[t]{0.75\linewidth}
+          {{ block.rendered_html|html2tex_no_images }}
+        \end{minipage}%
+        \hspace{0.01\linewidth}%
+        \begin{minipage}[t]{0.24\linewidth}
+          \vspace{-2pt}\centering
+          {% if ex.image_path %}\includegraphics[width=\linewidth,height=0.24\textheight,keepaspectratio]{ {{ ex.image_path }} }{% endif %}
+        \end{minipage}
+        \vspace{8pt}
+
+      {% elif block.block_type == 'question' %}
+        \refstepcounter{exQno}%
+        \vspace{0.5em}
+        \noindent
+        \begin{minipage}[t]{0.90\linewidth}
+          \textbf{\theexQno. }\ignorespaces
+          {% for child in block.value.content %}{% render_with_params child ex.param_values as qhtml %}{{ qhtml|strip_badges|html2tex }}{% endfor %}
+        \end{minipage}%
+        \hfill
+        \begin{minipage}[t]{0.10\linewidth}
+          \raggedleft
+          {% if block.value.points %}\textbf{ {{ block.value.points|floatformat:0 }} pt}{% endif %}
+        \end{minipage}
+        \par
+        \vspace{1.2em}
+
+        {% if is_correction and block.value.solution %}
+          \noindent\textcolor{green}{\textbf{Solution :}}
+          \par\vspace{4pt}
+          {% for child in block.value.solution %}{% render_with_params child ex.param_values as solhtml %}
+            \noindent\textcolor{green}{ {{ solhtml|html2tex }} }
+          {% endfor %}
+          \vspace{8pt}
+        {% endif %}
+
+      {% else %}
+        {{ block.rendered_html|html2tex }}\vspace{4pt}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  \vspace{12pt}
+{% empty %}
+  \noindent\emph{Aucun exercice sélectionné.}
+{% endfor %}
+
+===== /srv/pconline/generator/templatetags/latex.py =====
+from django import template
+from django.utils.safestring import mark_safe
+from django.conf import settings
+import os
+import html as _html
+import re
+
+register = template.Library()
+
+# --- Helpers légers ---
+def _repair_mojibake(s: str) -> str:
+    if not s:
+        return s
+    if 'Ã' in s or 'Â' in s or 'â' in s:
+        try:
+            return s.encode('latin-1', 'ignore').decode('utf-8', 'ignore')
+        except Exception:
+            return s
+    return s
+
+
+def _html_to_tex(value: str) -> str:
+    if value is None:
+        return ""
+    s = str(value)
+    s = _html.unescape(s)
+    s = _repair_mojibake(s)
+
+    # Pass-through <tex>...</tex>
+    tex_placeholders = []
+    def _extract_tex(m):
+        idx = len(tex_placeholders)
+        tex_placeholders.append(m.group(1))
+        return f"__TEX__{idx}__"
+    s = re.sub(r"(?is)<tex>([\s\S]*?)</tex>", _extract_tex, s)
+
+    # Isoler maths
+    math_pattern = re.compile(r'(\$[^$]+\$|\\\([^()]+\\\))')
+    parts, last = [], 0
+    for match in math_pattern.finditer(s):
+        if match.start() > last:
+            parts.append(('text', s[last:match.start()]))
+        parts.append(('math', match.group(0)))
+        last = match.end()
+    if last < len(s):
+        parts.append(('text', s[last:]))
+
+    result = []
+    image_placeholders = []
+    for typ, content in parts:
+        if typ == 'math':
+            result.append(content)
+            continue
+        text = content
+        text = re.sub(r"(?i)<\s*br\s*/?\s*>", r"\\newline ", text)
+        text = re.sub(r"<[^>]+>", "", text)
+        for a, b in [("\\", r"\\textbackslash{}"), ("{", r"\\{"), ("}", r"\\}"), ("#", r"\\#"), ("%", r"\\%"), ("&", r"\\&"), ("_", r"\\_"), ("~", r"\\textasciitilde{}"), ("^", r"\\textasciicircum{}")]:
+            text = text.replace(a, b)
+        # filet de secours lambda
+        text = text.replace("ÃŽÂ»", r"$\\lambda$").replace("Î»", r"$\\lambda$")
+        # Restaurer <tex>
+        if tex_placeholders:
+            def _restore_tex(m):
+                i = int(m.group(1))
+                return tex_placeholders[i] if 0 <= i < len(tex_placeholders) else ''
+            text = re.sub(r"__TEX__([0-9]+)__", _restore_tex, text)
+        result.append(text)
+
+    return ''.join(result)
+
+
+def _html_to_tex_no_images(value: str) -> str:
+    if value is None:
+        return ""
+    s = str(value)
+    s = _html.unescape(s)
+    s = _repair_mojibake(s)
+
+    # Pass-through <tex>...</tex>
+    tex_placeholders = []
+    def _extract_tex(m):
+        idx = len(tex_placeholders)
+        tex_placeholders.append(m.group(1))
+        return f"__TEX__{idx}__"
+    s = re.sub(r"(?is)<tex>([\s\S]*?)</tex>", _extract_tex, s)
+
+    math_pattern = re.compile(r'(\$[^$]+\$|\\\([^()]+\\\))')
+    parts, last = [], 0
+    for match in math_pattern.finditer(s):
+        if match.start() > last:
+            parts.append(('text', s[last:match.start()]))
+        parts.append(('math', match.group(0)))
+        last = match.end()
+    if last < len(s):
+        parts.append(('text', s[last:]))
+
+    result = []
+    for typ, content in parts:
+        if typ == 'math':
+            result.append(content)
+            continue
+        text = content
+        text = re.sub(r"(?i)<\s*br\s*/?\s*>", r"\\newline ", text)
+        text = re.sub(r"<[^>]+>", "", text)
+        for a, b in [("\\", r"\\textbackslash{}"), ("{", r"\\{"), ("}", r"\\}"), ("#", r"\\#"), ("%", r"\\%"), ("&", r"\\&"), ("_", r"\\_"), ("~", r"\\textasciitilde{}"), ("^", r"\\textasciicircum{}")]:
+            text = text.replace(a, b)
+        text = text.replace("ÃŽÂ»", r"$\\lambda$").replace("Î»", r"$\\lambda$")
+        if tex_placeholders:
+            def _restore_tex(m):
+                i = int(m.group(1))
+                return tex_placeholders[i] if 0 <= i < len(tex_placeholders) else ''
+            text = re.sub(r"__TEX__([0-9]+)__", _restore_tex, text)
+        result.append(text)
+
+    return ''.join(result)
+
+@register.filter(name="html2tex")
+def html2tex_filter(value):
+    return mark_safe(_html_to_tex(value))
+
+@register.filter(name="html2tex_no_images")
+def html2tex_no_images_filter(value):
+    return mark_safe(_html_to_tex_no_images(value))
+
+@register.filter(name="tex")
+def tex_filter(value):
+    return mark_safe(_html_to_tex(value))
+
+@register.filter
+def strip_badges(text):
+    if not text:
+        return ""
+    s = str(text)
+    s = re.sub(r'^\s*\(\s*\d+(?:[.,]\d+)?\s*pt\s*\)\s*', '', s, flags=re.I)
+    s = re.sub(r'^\s*(FC|APP|ENT)\s*[:\-]?\s*', '', s, flags=re.I)
+    return s
+===== /srv/pconline/generator/views.py =====
+# generator/views.py
+from django.shortcuts import render
+from django.http import HttpRequest, HttpResponse, JsonResponse, HttpResponseBadRequest
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods, require_GET
+from django.template.loader import render_to_string
+from django.conf import settings
+
+import os
+import re
+import random
+import subprocess
+import tempfile
+from pathlib import Path
+from urllib.parse import urlparse
+import hashlib
+import json
+
+from referentiel.models import Niveau
+from kahoot.utils import get_available_chapters_by_niveau
+from .services.selection import build_selection_bundle
+from .services.media_paths import normalize_media_url, extract_img_srcs
+
+
+
+# =========================
+# Utils
+# =========================
+def _is_true(v) -> bool:
+    return str(v).lower() in ("1", "true", "yes", "on")
+def _rng_from_seed(base_seed: str, *parts: str) -> random.Random:
+    """Crée un RNG déterministe à partir d'une graine de base et de sous-clés.
+    Utilise md5 pour un entier stable indépendamment de l'instance Python.
+    """
+    key = (base_seed or "0") + "::" + "::".join(str(p) for p in parts)
+    h = hashlib.md5(key.encode("utf-8")).hexdigest()
+    seed_int = int(h[:16], 16)
+    return random.Random(seed_int)
+
+
+def _image_abspath(img):
+    """
+    Retourne un chemin disque exploitable par LaTeX pour une Wagtail Image/Rendition.
+    None si pas trouvable.
+    """
+    try:
+        f = getattr(img, "file", None)
+        if f and hasattr(f, "path"):
+            return f.path
+        # parfois "img" est une rendition
+        rend = getattr(img, "image", None)
+        if rend and hasattr(rend, "file") and hasattr(rend.file, "path"):
+            return rend.file.path
+    except Exception:
+        pass
+    return None
+
+
+def _logo_path_for_latex(value: str | None) -> str:
+    """
+    LaTeX ne charge pas les URLs http/https. On renvoie un chemin disque ou "".
+    """
+    if not value:
+        return ""
+    
+    # chemin absolu
+    if os.path.isabs(value) and os.path.exists(value):
+        return value
+    
+    # chemin /media/... (convertir en chemin local)
+    if value.startswith("/media/"):
+        # Convertir /media/images/logo.original.png en chemin local
+        media_root = os.path.join(settings.MEDIA_ROOT)
+        local_path = os.path.join(media_root, value[7:])  # Enlever "/media/"
+        if os.path.exists(local_path):
+            return local_path
+    
+    # chemin relatif depuis la racine du projet
+    if value.startswith("/"):
+        abs_guess = os.path.abspath(value)
+        if os.path.exists(abs_guess):
+            return abs_guess
+    
+    # Pour les URLs, essayer de deviner le chemin local
+    if value.startswith("http"):
+        # Essayer de convertir l'URL en chemin local
+        if "media/images/logo.original.png" in value:
+            # Chemin par défaut pour le logo
+            default_logo = os.path.join(settings.MEDIA_ROOT, "images", "logo.original.png")
+            if os.path.exists(default_logo):
+                return default_logo
+    
+    # sinon (URL, etc.)
+    return ""
+
+
+def _html_to_tex(s: str) -> str:
+    """(optionnel) mini nettoyage HTML -> LaTeX pour QCM courts."""
+    if not s:
+        return ""
+    txt = str(s)
+    txt = re.sub(r"<\s*br\s*/?\s*>", r"\\newline ", txt, flags=re.I)
+    txt = re.sub(r"</?\s*(b|strong)\s*>", r"", txt, flags=re.I)
+    txt = re.sub(r"</?\s*(i|em)\s*>", r"", txt, flags=re.I)
+    txt = re.sub(r"<\s*sub\s*>", r"$_{", txt, flags=re.I)
+    txt = re.sub(r"<\s*/\s*sub\s*>", r"}$", txt, flags=re.I)
+    txt = re.sub(r"<\s*sup\s*>", r"$^{", txt, flags=re.I)
+    txt = re.sub(r"<\s*/\s*sup\s*>", r"}$", txt, flags=re.I)
+    txt = re.sub(r"<[^>]+>", "", txt)
+    for a, b in [
+        ("\\", r"\textbackslash{}"),
+        ("{", r"\{"), ("}", r"\}"),
+        ("#", r"\#"), ("$", r"\$"), ("%", r"\%"),
+        ("&", r"\&"), ("_", r"\_"),
+        ("~", r"\textasciitilde{}"),
+        ("^", r"\textasciicircum{}"),
+    ]:
+        txt = txt.replace(a, b)
+    return txt
+
+
+# =========================
+# Pages HTML
+# =========================
+def index(request: HttpRequest) -> HttpResponse:
+    return render(request, "generator/index.html")
+
+
+def devoir_page(request: HttpRequest) -> HttpResponse:
+    niveaux = list(Niveau.objects.all())
+    chapters_structure = get_available_chapters_by_niveau()
+    return render(
+        request,
+        "generator/devoir_wizard.html",
+        {"niveaux": niveaux, "chapters_structure": chapters_structure},
+    )
+
+
+# =========================
+# API payload (session)
+# =========================
+@csrf_exempt
+def save_payload(request: HttpRequest):
+    """Sauvegarde du payload JSON dans la session."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Invalid method"}, status=405)
+    import json
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        request.session["generator_payload"] = data
+        request.session.modified = True
+        return JsonResponse({"ok": True})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+
+# =========================
+# Preview HTML (QCM/QR/Exos)
+# =========================
+@require_http_methods(["GET"])
+def qcm_preview_old(request: HttpRequest) -> HttpResponse:
+    """
+    ANCIENNE FONCTION - Remplacée par la nouvelle utilisant le service de sélection
+    Prévisualisation DS ou Série.
+    - DS : barème (approx) / min-max
+    - Série : compteurs fixes
+    """
+    from qcm.models import QcmQuestionAPage, QcmBankBPage, QcmQuestionCPage
+    from flashcard.models import FlashcardItem
+    from exo.models import ExoPageSimple, ParametreExoPage
+
+    payload = request.session.get("generator_payload", {}) or {}
+    type_ds = str(payload.get("type", request.GET.get("type", "ds"))).lower()
+
+    # seed base (varie en JS via Date.now())
+    base_seed = str(request.GET.get("seed") or payload.get("seed") or random.randint(1, 10**9))
+
+    qcm_pool, qcms, qa_pool, qa_cards, exercices = [], [], [], [], []
+    letters = ["A", "B", "C", "D"]
+
+    # QCM A
+    for q in QcmQuestionAPage.objects.live().specific():
+        opts = list(q.options.all())
+        if len(opts) >= 4:
+            corrects = [o for o in opts if o.is_correct]
+            incorrects = [o for o in opts if not o.is_correct]
+            if len(corrects) >= 1 and len(incorrects) >= 3:
+                rng = _rng_from_seed(base_seed, f"QA-{q.id}")
+                correct = rng.choice(corrects)
+                distractors = rng.sample(incorrects, 3)
+                pool = [correct, *distractors]
+                rng.shuffle(pool)
+                options_html = [o.text for o in pool]
+                correct_index = pool.index(correct) + 1
+                qcm_pool.append({
+                    "statement": q.statement,
+                    "image": q.image,
+                    "options": options_html,
+                    "correct_index": correct_index,
+                    "correct_letter": letters[correct_index - 1],
+                    "correct_text": options_html[correct_index - 1],
+                    "bareme": float(payload.get("ds_qcm_point", 1)),
+                })
+
+    # QCM B
+    for bank in QcmBankBPage.objects.live().specific():
+        variants = list(bank.variants.all())
+        if len(variants) >= 4:
+            rng = _rng_from_seed(base_seed, f"QB-{bank.id}")
+            correct = rng.choice(variants)
+            others = [v for v in variants if v != correct]
+            if len(others) >= 3:
+                distractors = rng.sample(others, 3)
+                pool = [correct.answer] + [d.answer for d in distractors]
+                rng.shuffle(pool)
+                correct_index = pool.index(correct.answer) + 1
+                qcm_pool.append({
+                    "statement": correct.statement,
+                    "image": correct.image,
+                    "options": pool,
+                    "correct_index": correct_index,
+                    "correct_letter": letters[correct_index - 1],
+                    "correct_text": pool[correct_index - 1],
+                    "bareme": float(payload.get("ds_qcm_point", 1)),
+                })
+
+    # QCM C
+    for q in QcmQuestionCPage.objects.live().specific():
+        correct_answers = q.get_correct_answers_list()
+        incorrect_answers = q.get_incorrect_answers_list()
+        if len(correct_answers) >= 1 and len(incorrect_answers) >= 3:
+            rng = _rng_from_seed(base_seed, f"QC-{q.id}")
+            correct = rng.choice(correct_answers)
+            distractors = rng.sample(incorrect_answers, 3)
+            pool = [correct, *distractors]
+            rng.shuffle(pool)
+            correct_index = pool.index(correct) + 1
+            qcm_pool.append({
+                "statement": q.statement,
+                "image": q.image,
+                "options": pool,
+                "correct_index": correct_index,
+                "correct_letter": letters[correct_index - 1],
+                "correct_text": pool[correct_index - 1],
+                "bareme": float(payload.get("ds_qcm_point", 1)),
+            })
+
+    # Flashcards
+    for card in FlashcardItem.objects.filter(is_active=True)[:50]:
+        # Une seule "variante" logique par carte (déterministe)
+        rng = _rng_from_seed(base_seed, f"FC-{card.id}")
+        qa_pool.append({
+            "question_html": str(card.question),
+            "answer_html": str(card.answer),
+            "image": getattr(card, "image", None),
+            "_seed": rng.random(),
+        })
+
+    # Exercices
+    exo_pool = list(ExoPageSimple.objects.live().specific())
+
+    # --- DS
+    if type_ds == "ds":
+        bareme_global = float(payload.get("bareme_global", request.GET.get("bareme_global", 20)))
+        remaining = bareme_global
+
+        if _is_true(payload.get("ds_qcm_enable", True)):
+            pt_q = float(payload.get("ds_qcm_point", 1))
+            min_q = int(payload.get("ds_qcm_min", 0))
+            if pt_q > 0 and min_q > 0 and remaining >= pt_q:
+                n_q_min = min(min_q, int(remaining // pt_q), len(qcm_pool))
+                if n_q_min > 0:
+                    qcms.extend(random.sample(qcm_pool, n_q_min))
+                    remaining -= n_q_min * pt_q
+
+        if _is_true(payload.get("ds_qr_enable", False)):
+            pt_fc = float(payload.get("ds_qr_point", 1))
+            min_fc = int(payload.get("ds_qr_min", 0))
+            if pt_fc > 0 and min_fc > 0 and remaining >= pt_fc:
+                n_fc_min = min(min_fc, int(remaining // pt_fc), len(qa_pool))
+                if n_fc_min > 0:
+                    qa_cards.extend(random.sample(qa_pool, n_fc_min))
+                    remaining -= n_fc_min * pt_fc
+
+        if exo_pool and (
+            _is_true(payload.get("ds_exo_application_enable", False)) or
+            _is_true(payload.get("ds_exo_entrainement_enable", False)) or
+            _is_true(payload.get("ds_exo_approfondissement_enable", False))
+        ):
+            by_level = {1: [], 2: [], 3: []}
+            for exo in exo_pool:
+                lvl = getattr(exo, "difficulty", 2) or 2
+                if lvl in by_level:
+                    by_level[lvl].append(exo)
+
+            for lvl in (1, 2, 3):
+                random.shuffle(by_level[lvl])
+                for exo in list(by_level[lvl]):
+                    pts = float(getattr(exo, "total_points", 0) or 0)
+                    if pts > 0 and pts <= remaining:
+                        seed_for_this = f"{base_seed}-{exo.id}-{len(exercices)}"
+                        params_page = exo.get_children().type(ParametreExoPage).specific().first()
+                        param_values = params_page.build_random_context(seed=seed_for_this) if params_page else {}
+                        exercices.append({
+                            "page": exo,
+                            "title": exo.title,
+                            "difficulty": exo.difficulty,
+                            "estimated_time_min": exo.estimated_time_min,
+                            "total_points": pts,
+                            "param_values": param_values,
+                        })
+                        remaining -= pts
+                    if remaining <= 0:
+                        break
+                if remaining <= 0:
+                    break
+
+        if _is_true(payload.get("ds_qcm_enable", True)) and remaining > 0:
+            pt_q = float(payload.get("ds_qcm_point", 1))
+            max_q = int(payload.get("ds_qcm_max", 10))
+            cur_q = len(qcms)
+            while cur_q < max_q and remaining >= pt_q and qcm_pool:
+                rng_pick = _rng_from_seed(base_seed, f"PICK-Q-{cur_q}")
+                qcms.append(rng_pick.choice(qcm_pool))
+                remaining -= pt_q
+                cur_q += 1
+
+        if _is_true(payload.get("ds_qr_enable", False)) and remaining > 0:
+            pt_fc = float(payload.get("ds_qr_point", 1))
+            max_fc = int(payload.get("ds_qr_max", 10))
+            cur_fc = len(qa_cards)
+            while cur_fc < max_fc and remaining >= pt_fc and qa_pool:
+                rng_pick = _rng_from_seed(base_seed, f"PICK-FC-{cur_fc}")
+                qa_cards.append(rng_pick.choice(qa_pool))
+                remaining -= pt_fc
+                cur_fc += 1
+
+        barreme_total = bareme_global - remaining
+        barreme_cible = bareme_global
+
+    # --- Série
+    else:
+        serie_qcm_count = int(payload.get("serie_qcm_count", 0))
+        serie_qr_count = int(payload.get("serie_qr_count", 0))
+        serie_exo_app = int(payload.get("serie_exo_application_count", 0))
+        serie_exo_ent = int(payload.get("serie_exo_entrainement_count", 0))
+        serie_exo_appf = int(payload.get("serie_exo_approfondissement_count", 0))
+
+        if serie_qcm_count > 0:
+            qcms = random.sample(qcm_pool, min(len(qcm_pool), serie_qcm_count))
+        if serie_qr_count > 0:
+            qa_cards = random.sample(qa_pool, min(len(qa_pool), serie_qr_count))
+
+        nb_exos = max(0, serie_exo_app + serie_exo_ent + serie_exo_appf)
+        if nb_exos > 0 and exo_pool:
+            picked = random.sample(exo_pool, min(nb_exos, len(exo_pool)))
+            for i, chosen in enumerate(picked):
+                seed_for_this = f"{base_seed}-{chosen.id}-{i}"
+                params_page = chosen.get_children().type(ParametreExoPage).specific().first()
+                param_values = params_page.build_random_context(seed=seed_for_this) if params_page else {}
+                exercices.append({
+                    "page": chosen,
+                    "title": chosen.title,
+                    "difficulty": chosen.difficulty,
+                    "estimated_time_min": chosen.estimated_time_min,
+                    "total_points": float(chosen.total_points),
+                    "param_values": param_values,
+                })
+
+        barreme_total = None
+        barreme_cible = None
+
+    return render(
+        request,
+        "generator/qcm_preview.html",
+        {
+            "type": type_ds,
+            "qcms": qcms,
+            "qa_cards": qa_cards,
+            "exercices": exercices,
+            "barreme_total": barreme_total,
+            "barreme_cible": barreme_cible,
+            # recap
+            "ds_qcm_min": int(payload.get("ds_qcm_min") or request.GET.get("ds_qcm_min") or 0),
+            "ds_qcm_max": int(payload.get("ds_qcm_max") or request.GET.get("ds_qcm_max") or 0),
+            "ds_qr_min": int(payload.get("ds_qr_min") or request.GET.get("ds_qr_min") or 0),
+            "ds_qr_max": int(payload.get("ds_qr_max") or request.GET.get("ds_qr_max") or 0),
+            "ds_qcm_enable": str(payload.get("ds_qcm_enable") or request.GET.get("ds_qcm_enable") or "1") in ("1","true","True","yes","on"),
+            "ds_qr_enable": str(payload.get("ds_qr_enable") or request.GET.get("ds_qr_enable") or "0") in ("1","true","True","yes","on"),
+            "ds_exo_application_enable": str(payload.get("ds_exo_application_enable") or request.GET.get("ds_exo_application_enable") or "0") in ("1","true","True","yes","on"),
+            "ds_exo_entrainement_enable": str(payload.get("ds_exo_entrainement_enable") or request.GET.get("ds_exo_entrainement_enable") or "0") in ("1","true","True","yes","on"),
+            "ds_exo_approfondissement_enable": str(payload.get("ds_exo_approfondissement_enable") or request.GET.get("ds_exo_approfondissement_enable") or "0") in ("1","true","True","yes","on"),
+        },
+    )
+
+
+# =========================
+# Génération PDF LaTeX
+# =========================
+def pdf_build(request: HttpRequest, mode: str) -> HttpResponse:
+    """
+    Construit le PDF (énoncé|correction) à partir de templates LaTeX :
+    templates/generator/pdf/{main.tex, header.tex, section_qcm.tex, section_flashcards.tex, section_exercices.tex}
+    Utilise le bundle en session pour garantir la cohérence avec la preview.
+    """
+    mode = (mode or "").lower().strip()
+    if mode not in ("enonce", "correction"):
+        return HttpResponseBadRequest("Mode invalide (enonce|correction)")
+
+    payload = request.session.get("generator_payload", {}) or {}
+    type_ds = str(payload.get("type", "ds")).lower()
+    is_correction = 1 if mode == "correction" else 0
+
+    # Récupérer le bundle en session (garantit la cohérence avec la preview)
+    bundle_json = request.session.get("selection_bundle")
+    if not bundle_json:
+        # Si pas de bundle en session, en créer un
+        seed = str(payload.get("seed") or random.randint(1, 10**9))
+        bundle = build_selection_bundle(payload, seed)
+        bundle_json = bundle.to_jsonable()
+        request.session["selection_bundle"] = bundle_json
+        request.session["selection_seed"] = seed
+
+    # Enrichissement images pour TeX (et debug)
+    def enrich_images(items, media_key="media"):
+        for it in items:
+            # 1) sources directes (media)
+            imgs = list(it.get(media_key, []) or [])
+            # 2) fallback: extraire <img> du HTML si pas de media explicite
+            if not imgs:
+                imgs += extract_img_srcs(it.get("statement_html"))
+            if not imgs:
+                imgs += extract_img_srcs(it.get("correction_html"))
+            # 3) compat: champ 'image' simple éventuel
+            if not imgs and it.get("image"):
+                imgs.append(it["image"])
+
+            resolved = []
+            for src in imgs:
+                abs_path, ok = normalize_media_url(src)
+                resolved.append({
+                    "src": src,
+                    "image_abs_path": abs_path,
+                    "image_exists": bool(ok),
+                })
+            it["resolved_media"] = resolved
+            # Compat: première image rapide
+            if resolved:
+                it["has_image"] = any(x["image_exists"] for x in resolved)
+                first_ok = next((x for x in resolved if x["image_exists"]), None)
+                it["image_path"] = first_ok["image_abs_path"] if first_ok else resolved[0]["image_abs_path"]
+            else:
+                it["has_image"] = False
+                it["image_path"] = None
+
+    enrich_images(bundle_json.get("qcms", []))
+    enrich_images(bundle_json.get("exercices", []))  # <<< essentiel pour la section exercices
+
+    # Fonction helper pour convertir URL en chemin disque
+    def _image_abspath_from_url(image_url):
+        """Convertit une URL d'image en chemin disque pour LaTeX"""
+        if not image_url:
+            return None
+        try:
+            # Si c'est une URL relative /media/...
+            if image_url.startswith('/media/'):
+                return os.path.join(settings.MEDIA_ROOT, image_url[7:])  # Enlever '/media/'
+            # Si c'est une URL complète, essayer d'extraire le chemin
+            elif 'media/' in image_url:
+                parts = image_url.split('media/')
+                if len(parts) > 1:
+                    return os.path.join(settings.MEDIA_ROOT, parts[1])
+        except Exception:
+            pass
+        return None
+
+    # Extraire les données du bundle
+    qcms_data = bundle_json.get("qcms", [])
+    flashcards_data = bundle_json.get("flashcards", [])
+    exercices_data = bundle_json.get("exercices", [])
+
+    # Adapter les données du bundle pour les templates LaTeX
+    qcm_for_tex = []
+    for qcm in qcms_data:
+        options = qcm.get("options", [])
+        A, B, C, D = (options + ["", "", "", ""])[:4]
+        
+        # Récupérer l'image depuis les médias
+        media_list = qcm.get("media", [])
+        image_path = ""
+        if media_list:
+            # Prendre la première image de la liste (c'est un ID, pas une URL)
+            image_id = media_list[0]
+            try:
+                from wagtail.images.models import Image
+                image_obj = Image.objects.filter(id=int(image_id)).first()
+                if image_obj and image_obj.file:
+                    # Convertir le chemin de l'image en chemin absolu pour LaTeX
+                    image_path = _image_abspath_from_url(image_obj.file.url) or ""
+
+            except (ValueError, TypeError):
+                pass
+        
+        qcm_for_tex.append({
+            "statement": qcm.get("statement_html", ""),
+            "A": A, "B": B, "C": C, "D": D,
+            "points": qcm.get("points", 1),
+            "correct_index": int(qcm.get("correct_index", 1)),
+            "image_path": image_path,
+            "has_image": bool(image_path),
+        })
+
+    # Adapter les flashcards pour les templates LaTeX
+    flashcards_for_tex = []
+    for fc in flashcards_data:
+        media_list = fc.get("media", [])
+        image_path = ""
+        if media_list:
+            # Prendre la première image de la liste (c'est un ID, pas une URL)
+            image_id = media_list[0]
+            try:
+                from wagtail.images.models import Image
+                image_obj = Image.objects.filter(id=int(image_id)).first()
+                if image_obj and image_obj.file:
+                    # Convertir le chemin de l'image en chemin absolu pour LaTeX
+                    image_path = _image_abspath_from_url(image_obj.file.url) or ""
+
+            except (ValueError, TypeError):
+                pass
+        
+        flashcards_for_tex.append({
+            "question_html": fc.get("question_html", ""),
+            "answer_html": fc.get("answer_html", ""),
+            "image_path": image_path,
+            "has_image": bool(image_path),
+            "points": fc.get("points", 1),
+        })
+
+    # Adapter les exercices pour les templates LaTeX (comme qcm_preview)
+    exercices_for_tex = []
+    for ex in exercices_data:
+        # Récupérer l'objet ExoPageSimple depuis la base de données
+        ex_page = None
+        try:
+            from exo.models import ExoPageSimple
+            ex_page = ExoPageSimple.objects.filter(id=ex.get("id_page")).first()
+        except Exception:
+            pass
+        
+        # Construire la liste de candidats d'images (ordre de priorité)
+        candidates = []
+        
+        # (a) déjà enrichi en amont ?
+        if ex.get("image_path"):
+            candidates.append(ex["image_path"])
+        for m in ex.get("resolved_media", []) or []:
+            # resolved_media vient de enrich_images : garde les absolus d'abord
+            if m.get("image_abs_path"):
+                candidates.append(m["image_abs_path"])
+            if m.get("src"):
+                candidates.append(m["src"])
+
+        # (b) champ "media" brut du bundle (ids/urls)
+        for src in ex.get("media", []) or []:
+            candidates.append(src)
+
+        # (c) extraire du HTML rendu (statement, puis correction)
+        for src in extract_img_srcs(ex.get("statement_html")):
+            candidates.append(src)
+        for src in extract_img_srcs(ex.get("correction_html")):
+            candidates.append(src)
+
+        # Pré-rendre les blocs avec les paramètres pour le template LaTeX
+        rendered_blocks = []
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"DEBUG PDF: ex_page = {ex_page}")
+        logger.info(f"DEBUG PDF: ex_page.contenu = {ex_page.contenu if ex_page else 'None'}")
+        if ex_page and ex_page.contenu:
+            from django.template import engines
+            from exo.templatetags.param_tags import render_with_params
+            django_engine = engines['django']
+            
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"DEBUG PDF: Traitement de {len(ex_page.contenu)} blocs pour la page {ex_page.id}")
+            
+            for block in ex_page.contenu:
+                try:
+                    # Créer un contexte minimal pour le rendu
+                    context = {
+                        'request': request,
+                        'param_values': ex.get("param_values", {}) or {},
+                    }
+                    # Rendre le bloc avec les paramètres
+                    param_values = ex.get("param_values", {}) or {}
+                    rendered_html = render_with_params(context, block, param_values)
+                    
+                    # Filets de secours pour symboles (mojibake/grec) avant passage LaTeX
+                    try:
+                        rendered_html = rendered_html.replace("ÃŽÂ»", "${\\lambda}$").replace("Î»", "${\\lambda}$")
+                    except Exception:
+                        pass
+                    
+                    # FORCER le remplacement des paramètres si pas fait
+                    if param_values:
+                        import re
+                        # Remplacer [[param]] par les valeurs (TOUTES les occurrences)
+                        for param_name, param_value in param_values.items():
+                            if isinstance(param_value, str):
+                                pattern = re.compile(f'\\[\\[\\s*{re.escape(param_name)}\\s*\\]\\]', re.IGNORECASE)
+                                rendered_html = pattern.sub(str(param_value), rendered_html)
+                        
+                        # DEBUG: Vérifier si les paramètres de tableau sont présents
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.info(f"DEBUG PDF: param_values pour exercice {ex.get('title', 'Unknown')}: {list(param_values.keys())}")
+                        for name, value in param_values.items():
+                            if isinstance(value, dict) and 'orientation' in value:
+                                logger.info(f"DEBUG PDF: Paramètre tableau {name}: {value}")
+                    rendered_blocks.append({
+                        'block_type': block.block_type,
+                        'value': block.value,
+                        'rendered_html': rendered_html,
+                    })
+                    
+                    # Extraire les images du HTML rendu et les ajouter aux candidats
+                    for src in extract_img_srcs(rendered_html):
+                        candidates.append(src)
+                        
+                except Exception as e:
+                    print(f"Erreur rendu bloc {block.block_type}: {e}")
+                    # Fallback: rendu simple
+                    rendered_html = str(block)
+                    rendered_blocks.append({
+                        'block_type': block.block_type,
+                        'value': block.value,
+                        'rendered_html': rendered_html,
+                    })
+                    
+                    # Extraire les images du fallback aussi
+                    for src in extract_img_srcs(rendered_html):
+                        candidates.append(src)
+
+        # Résoudre vers un chemin disque existant (premier OK) - APRÈS le rendu des blocs
+        image_path = ""
+        for src in candidates:
+            if not src:
+                continue
+            # si déjà un chemin absolu plausible
+            if isinstance(src, str) and src.startswith(("/", "/srv/", "/var/", "/home/")):
+                if os.path.exists(src):
+                    image_path = src
+                    break
+            # sinon normaliser via MEDIA_ROOT, online/media, /media, etc.
+            abs_path, ok = normalize_media_url(str(src))
+            if ok and abs_path:
+                image_path = abs_path
+                break
+
+        # Assembler l'item pour TeX
+        exercices_for_tex.append({
+            "title": ex.get("title", ""),
+            "total_points": ex.get("total_points", 1),
+            "difficulty": ex.get("difficulty"),
+            "estimated_time_min": ex.get("estimated_time_min"),
+            "page": ex_page,  # ← OBJET PAGE COMPLET (comme qcm_preview)
+            "rendered_blocks": rendered_blocks,  # ← BLOCS PRÉ-RENDUS
+            "param_values": ex.get("param_values", {}),  # ← PARAMÈTRES
+            "image_path": image_path,  # ← GARDER POUR COMPATIBILITÉ
+            "has_image": bool(image_path),  # ← GARDER POUR COMPATIBILITÉ
+        })
+
+        # Log côté serveur utile pour debug
+        print("DEBUG EXO PICKED IMAGE:", ex.get("title", ""), "->", image_path)
+
+    DEFAULT_LOGO_URL = "https://physiquechimie.online/media/images/logo.original.png"
+
+# on prend l'URL du payload si fournie, sinon le logo par défaut
+    logo_url = payload.get("header_logo_url") or DEFAULT_LOGO_URL
+
+# convertit l'URL /media/... en chemin disque pour LaTeX
+    header_logo_path = _logo_path_for_latex(logo_url)
+    
+    # Debug: afficher les chemins pour comprendre
+    print(f"DEBUG: logo_url = {logo_url}")
+    print(f"DEBUG: header_logo_path = {header_logo_path}")
+    print(f"DEBUG: settings.MEDIA_ROOT = {settings.MEDIA_ROOT}")
+
+# (optionnel) si le fichier n'existe pas en local, on force le mode "texte"
+    if not header_logo_path:
+    # laisser vide => l’entête LaTeX affichera les 3 lignes de texte
+         header_logo_path = ""
+    # Contexte LaTeX
+    ctx = {
+    # === jeux de variables attendues par tes .tex ===
+    # (A) Noms "bruts" utilisés par ton main.tex actuel
+        "type": "ds" if type_ds == "ds" else "serie",
+        "barreme_cible": int(float(payload.get("bareme_global", 20))),
+        "sous_titre_1": payload.get("sous_titre_1", ""),
+        "sous_titre_2": payload.get("sous_titre_2", ""),
+        "header_logo_path": header_logo_path,
+        "header_line1": payload.get("header_line1", "PHYSIQUE"),
+        "header_line2": payload.get("header_line2", "CHIMIE"),
+        "header_line3": payload.get("header_line3", "ONLINE"),
+        "titre": payload.get("titre", "Devoir"),
+        "is_correction": 1 if mode == "correction" else 0,
+
+        # (B) Anciennes clés (si d'autres templates les utilisent)
+        "typeDS": "ds" if type_ds == "ds" else "serie",
+        "baremeGlobal": int(float(payload.get("bareme_global", 20))),
+        "sousTitreUn": payload.get("sous_titre_1", ""),
+        "sousTitreDeux": payload.get("sous_titre_2", ""),
+        "headerLineUn": payload.get("header_line1", "PHYSIQUE"),
+        "headerLineDeux": payload.get("header_line2", "CHIMIE"),
+        "headerLineTrois": payload.get("header_line3", "ONLINE"),
+        "logoPath": header_logo_path,
+        "classe": payload.get("classe", "Classe"),
+        "isCorrection": 1 if mode == "correction" else 0,
+        
+        # Barème ajusté
+        "barreme_cible": bundle_json.get("meta", {}).get("barreme_cible", 0),
+        "barreme_obtenu": bundle_json.get("meta", {}).get("barreme_obtenu", 0),
+
+        # QCM
+        "qcms": qcm_for_tex,
+        # Flashcards
+        "flashcards": flashcards_for_tex,
+        # Exercices
+        "exercices": exercices_for_tex,
+        # Mode pour les templates
+        "mode": mode,
+    }
+
+    # Totaux et flags pour l'entête "Questions de cours"
+    qcm_points_sum = sum(float(x.get("points") or 0) for x in qcm_for_tex)
+    flashcards_points_sum = sum(float(x.get("points") or 0) for x in flashcards_for_tex)
+    has_qcms = bool(qcm_for_tex)
+    has_flashcards = bool(flashcards_for_tex)
+
+    ctx.update({
+        "has_qcms": has_qcms,
+        "has_flashcards": has_flashcards,
+        "qcm_points_sum": qcm_points_sum,
+        "flashcards_points_sum": flashcards_points_sum,
+    })
+
+    # Rendu & compilation
+    with tempfile.TemporaryDirectory() as tmpdir:
+        main_tex = render_to_string("generator/pdf/main.tex", ctx)
+        header_tex = render_to_string("generator/pdf/header.tex", ctx)
+        qcm_tex = render_to_string("generator/pdf/section_qcm.tex", ctx)
+        flashcards_tex = render_to_string("generator/pdf/section_flashcards.tex", ctx)
+        exercices_tex = render_to_string("generator/pdf/section_exercices.tex", ctx)
+
+        with open(os.path.join(tmpdir, "main.tex"), "w", encoding="utf-8") as f:
+            f.write(main_tex)
+        with open(os.path.join(tmpdir, "header.tex"), "w", encoding="utf-8") as f:
+            f.write(header_tex)
+        with open(os.path.join(tmpdir, "section_qcm.tex"), "w", encoding="utf-8") as f:
+            f.write(qcm_tex)
+        with open(os.path.join(tmpdir, "section_flashcards.tex"), "w", encoding="utf-8") as f:
+            f.write(flashcards_tex)
+        with open(os.path.join(tmpdir, "section_exercices.tex"), "w", encoding="utf-8") as f:
+            f.write(exercices_tex)
+
+        def _run(cmd):
+            return subprocess.run(
+                cmd,
+                cwd=tmpdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding='latin-1',  # Utiliser latin-1 pour éviter les erreurs d'encodage
+                errors='replace',    # Remplacer les caractères non décodables
+                check=False,
+            )
+
+        # deux passes LaTeX
+        for _ in range(2):
+            r = _run(["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "main.tex"])
+            if r.returncode != 0:
+                return HttpResponse("Erreur LaTeX:\n\n" + r.stdout, content_type="text/plain", status=500)
+
+        pdf_path = os.path.join(tmpdir, "main.pdf")
+        if not os.path.exists(pdf_path):
+            return HttpResponse("PDF non généré.", status=500, content_type="text/plain")
+
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    filename = f"{payload.get('titre', 'devoir')}-{mode}.pdf"
+    resp["Content-Disposition"] = f'inline; filename="{filename}"'
+    return resp
+
+
+def generate_entete_pdf(request: HttpRequest, mode: str) -> HttpResponse:
+    """
+    Wrapper pour tes boutons existants:
+    /generator/pdf/entete/enonce/  et  /generator/pdf/entete/correction/
+    Lit les champs GET (titre, sous_titre_*, header_*, type, bareme_global, classe),
+    les pousse dans la session, puis appelle pdf_build(mode).
+    """
+    mode = (mode or "").strip().lower()
+    if mode not in ("enonce", "correction"):
+        return HttpResponseBadRequest("Mode invalide (enonce|correction)")
+
+    payload = request.session.get("generator_payload", {}) or {}
+    for k in [
+        "type", "titre", "sous_titre_1", "sous_titre_2", "bareme_global",
+        "header_logo_url", "header_line1", "header_line2", "header_line3",
+        "classe",
+    ]:
+        v = request.GET.get(k)
+        if v is not None:
+            if k == "bareme_global":
+                try:
+                    payload[k] = float(v)
+                except Exception:
+                    payload[k] = v
+            else:
+                payload[k] = v
+
+    payload["seed"] = payload.get("seed") or str(int(__import__("time").time() * 1000))
+    request.session["generator_payload"] = payload
+    request.session.modified = True
+    return pdf_build(request, mode)
+
+
+def _get_payload_and_seed(request: HttpRequest) -> tuple[dict, str]:
+    """Helper pour récupérer payload et seed depuis session/GET"""
+    payload = request.session.get("generator_payload") or {}
+    
+    # Si le payload de session est vide ou ne contient pas les paramètres essentiels, utiliser les valeurs par défaut
+    if not payload or "type" not in payload:
+        payload = {
+            "type": "ds",
+            "bareme_global": 20,
+            "ds_qcm_enable": True,
+            "ds_qr_enable": False,
+            "ds_exo_application_enable": True,
+            "ds_exo_entrainement_enable": True,
+            "ds_exo_approfondissement_enable": True,
+            "ds_qcm_point": 1,
+            "ds_qr_point": 1,
+        }
+    
+    # Permettre de surcharger les paramètres d'exercices via GET
+    exo_params = [
+        "ds_exo_application_enable", "ds_exo_entrainement_enable", "ds_exo_approfondissement_enable",
+        "serie_exo_application_count", "serie_exo_entrainement_count", "serie_exo_approfondissement_count"
+    ]
+    for param in exo_params:
+        if param in request.GET:
+            if param.endswith("_enable"):
+                payload[param] = request.GET.get(param, '').lower() in ('true', '1', 'on')
+            else:
+                try:
+                    payload[param] = int(request.GET.get(param, 0))
+                except ValueError:
+                    payload[param] = 0
+    
+    seed = str(request.GET.get("seed") or request.session.get("selection_seed") or payload.get("seed") or "0")
+    return payload, seed
+
+
+def qcm_preview(request: HttpRequest) -> HttpResponse:
+    """Vue preview utilisant le service de sélection centralisé"""
+    payload, seed = _get_payload_and_seed(request)
+    
+    # Vérifier si on peut réutiliser le bundle en session
+    force_rebuild = request.GET.get('force_rebuild', 'false').lower() == 'true'
+    bundle_json = request.session.get("selection_bundle")
+    if not bundle_json or str(request.session.get("selection_seed")) != str(seed) or force_rebuild:
+        bundle = build_selection_bundle(payload, seed)
+        bundle_json = bundle.to_jsonable()
+        request.session["selection_bundle"] = bundle_json
+        request.session["selection_seed"] = seed
+
+    # Enrichissement images pour TeX (et debug)
+    def enrich_images(items, media_key="media"):
+        for it in items:
+            # 1) sources directes (media)
+            imgs = list(it.get(media_key, []) or [])
+            # 2) fallback: extraire <img> du HTML si pas de media explicite
+            if not imgs:
+                imgs += extract_img_srcs(it.get("statement_html"))
+            if not imgs:
+                imgs += extract_img_srcs(it.get("correction_html"))
+            # 3) compat: champ 'image' simple éventuel
+            if not imgs and it.get("image"):
+                imgs.append(it["image"])
+
+            resolved = []
+            for src in imgs:
+                abs_path, ok = normalize_media_url(src)
+                resolved.append({
+                    "src": src,
+                    "image_abs_path": abs_path,
+                    "image_exists": bool(ok),
+                })
+            it["resolved_media"] = resolved
+            # Compat: première image rapide
+            if resolved:
+                it["has_image"] = any(x["image_exists"] for x in resolved)
+                first_ok = next((x for x in resolved if x["image_exists"]), None)
+                it["image_path"] = first_ok["image_abs_path"] if first_ok else resolved[0]["image_abs_path"]
+            else:
+                it["has_image"] = False
+                it["image_path"] = None
+
+    enrich_images(bundle_json.get("qcms", []))
+    enrich_images(bundle_json.get("exercices", []))  # <<< essentiel pour la section exercices
+    # enrich_images(bundle_json.get("flashcards", []))  # si tu veux gérer des images sur cartes
+
+    # Adapter les données pour le template
+    from wagtail.images import get_image_model
+    Image = get_image_model()
+    
+    qcms_for_template = []
+    for qcm in bundle_json.get("qcms", []):
+        # Récupérer l'objet Image depuis la base de données si on a un ID
+        image_obj = None
+        media_list = qcm.get("media", [])
+        if media_list and media_list[0]:
+            try:
+                # Si c'est un ID, récupérer l'objet Image
+                if isinstance(media_list[0], (int, str)) and str(media_list[0]).isdigit():
+                    image_obj = Image.objects.filter(id=int(media_list[0])).first()
+                else:
+                    image_obj = media_list[0]
+            except Exception:
+                image_obj = None
+        
+        qcms_for_template.append({
+            "statement": qcm.get("statement_html", ""),
+            "image": image_obj,
+            "options": qcm.get("options", []),
+            "correct_index": qcm.get("correct_index", 1),
+            "correct_letter": qcm.get("correct_letter", "A"),
+            "correct_text": qcm.get("correct_text", ""),
+            "points": qcm.get("points", 1),
+        })
+
+    # Adapter les exercices pour le template
+    from exo.models import ExoPageSimple
+    exercices_for_template = []
+    
+    for ex_data in bundle_json.get("exercices", []):
+        # Récupérer l'objet ExoPageSimple depuis la base de données
+        ex_page = ExoPageSimple.objects.filter(id=ex_data.get("id_page")).first()
+        exercices_for_template.append({
+            "title": ex_data.get("title", ""),
+            "total_points": ex_data.get("total_points", 0),
+            "estimated_time_min": ex_data.get("estimated_time_min", 0),
+            "difficulty": ex_data.get("difficulty", 0),
+            "page": ex_page,  # Objet page pour accéder au contenu
+            "param_values": ex_data.get("param_values", {}),  # Paramètres récupérés du service
+        })
+
+    ctx = {
+        "type": (payload.get("type") or "ds"),
+        "seed_effective": str(seed),
+        "qcms": qcms_for_template,
+        "qa_cards": bundle_json.get("flashcards", []),
+        "exercices": exercices_for_template,
+        "barreme_cible": bundle_json["meta"].get("barreme_cible"),
+        "barreme_total": bundle_json["meta"].get("barreme_obtenu", 0),
+        # Paramètres d'activation pour l'affichage
+        "ds_qcm_enable": payload.get("ds_qcm_enable", True),
+        "ds_qr_enable": payload.get("ds_qr_enable", False),
+        "ds_exo_application_enable": payload.get("ds_exo_application_enable", True),
+        "ds_exo_entrainement_enable": payload.get("ds_exo_entrainement_enable", True),
+        "ds_exo_approfondissement_enable": payload.get("ds_exo_approfondissement_enable", True),
+        "ds_qcm_min": payload.get("ds_qcm_min", 0),
+        "ds_qcm_max": payload.get("ds_qcm_max", 10),
+        "ds_qr_min": payload.get("ds_qr_min", 0),
+        "ds_qr_max": payload.get("ds_qr_max", 10),
+    }
+    return render(request, "generator/qcm_preview.html", ctx)
+
+
+@require_GET
+def qcm_pdf_enonce(request: HttpRequest) -> HttpResponse:
+    """Génération PDF énoncé utilisant le bundle en session"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("DEBUG PDF: Fonction qcm_pdf_enonce appelée")
+    
+    payload, seed = _get_payload_and_seed(request)
+    bundle_json = request.session.get("selection_bundle")
+    if not bundle_json:
+        # reconstruit au besoin
+        bundle = build_selection_bundle(payload, seed)
+        bundle_json = bundle.to_jsonable()
+        request.session["selection_bundle"] = bundle_json
+        request.session["selection_seed"] = seed
+
+    # Utiliser la fonction pdf_build existante avec mode="enonce"
+    return pdf_build(request, "enonce")
+
+
+@require_GET
+def qcm_pdf_correction(request: HttpRequest) -> HttpResponse:
+    """Génération PDF correction utilisant le bundle en session"""
+    payload, seed = _get_payload_and_seed(request)
+    bundle_json = request.session.get("selection_bundle")
+    if not bundle_json:
+        # reconstruit au besoin
+        bundle = build_selection_bundle(payload, seed)
+        bundle_json = bundle.to_jsonable()
+        request.session["selection_bundle"] = bundle_json
+        request.session["selection_seed"] = seed
+
+    # Utiliser la fonction pdf_build existante avec mode="correction"
+    return pdf_build(request, "correction")
+
+===== /srv/pconline/exo/templatetags/param_tags.py =====
+from django import template
+from django.utils.safestring import mark_safe
+from wagtail.images import get_image_model
+import re
+
+register = template.Library()
+
+_param_pattern = re.compile(r"\[\[\s*([A-Za-z_][A-Za-z0-9_]*)\s*\]\]")
+_slot_pattern = re.compile(r"\[\[\s*slot:([A-Za-z_][A-Za-z0-9_]*)\s*\]\](.*?)\[\[\s*/\s*slot\s*\]\]", re.DOTALL)
+_image_pattern = re.compile(r"\[\[\s*image:([A-Za-z_][A-Za-z0-9_]*)\s*\]\]")
+_tableau_pattern = re.compile(r"\[\[\s*tableau:([A-Za-z_][A-Za-z0-9_]*)(?:\|([^]]*))?\s*\]\]")
+
+
+def _replace_placeholders(html: str, param_values: dict) -> str:
+    if not html:
+        return html
+
+    def repl(match):
+        name = match.group(1)
+        value = param_values.get(name)
+        if value is None:
+            return match.group(0)  # laisse tel quel si non défini
+        return str(value)
+
+    return _param_pattern.sub(repl, html)
+
+
+def _inline_slot_html(html: str) -> str:
+    """Sanitize slot HTML to avoid forcing new lines.
+    - Remove outer <p> wrappers
+    - Replace <p>, </p>, <div>, </div>, <br> with spaces
+    - Collapse whitespace
+    """
+    if not html:
+        return ''
+    s = html.strip()
+    # Remove single outer <p>...</p>
+    m = re.match(r"^<p[^>]*>([\s\S]*?)</p>$", s, flags=re.IGNORECASE)
+    if m:
+        s = m.group(1)
+    # Replace block tags with spaces
+    s = re.sub(r"</?p[^>]*>", " ", s, flags=re.IGNORECASE)
+    s = re.sub(r"</?div[^>]*>", " ", s, flags=re.IGNORECASE)
+    s = re.sub(r"<br\s*/?>", " ", s, flags=re.IGNORECASE)
+    # Collapse whitespace
+    s = re.sub(r"\s+", " ", s)
+    return s.strip()
+
+
+@register.simple_tag(takes_context=True)
+def render_with_params(context, block, param_values=None):
+    """Rend un bloc StreamField et applique le remplacement [[name]] avec param_values."""
+    try:
+        # Rendre le bloc avec le contexte actuel (Wagtail BoundBlock possède render)
+        html = block.render(context)
+    except Exception:
+        try:
+            # Fallback : tenter un rendu simple
+            html = str(block)
+        except Exception:
+            html = ""
+
+    if param_values is None:
+        param_values = context.get('param_values', {}) or {}
+    
+    # DEBUG: Vérifier les paramètres
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"DEBUG render_with_params: param_values = {param_values}")
+    logger.info(f"DEBUG render_with_params: HTML avant = {html[:200]}...")
+    
+    # Si c'est une chaîne simple (pas un bloc), traiter directement
+    if isinstance(block, str):
+        html = block
+
+    # Remplacer d'abord les slots [[slot:name]]...[[/slot]] si une valeur HTML est fournie
+    def slot_repl(match):
+        name = match.group(1)
+        default_html = match.group(2)
+        value = param_values.get(name)
+        # Slot sans variantes (K=0): insérer vide (aucun retour à la ligne superflu)
+        if value is None:
+            return ''
+        # Sinon insérer la variante fournie (HTML déjà prêt)
+        return _inline_slot_html(str(value))
+
+    html = _slot_pattern.sub(slot_repl, html)
+
+    # Remplacer ensuite les images [[image:name]] par <img ...>
+    Image = get_image_model()
+    def image_repl(m):
+        name = m.group(1)
+        val = param_values.get(name)
+        try:
+            if val:
+                img = Image.objects.filter(id=val).first()
+                if img:
+                    url = img.file.url
+                    return f'<img src="{url}" alt="{name}" style="max-width:100%;height:auto;vertical-align:middle;" />'
+        except Exception:
+            pass
+        # Si rien trouvé: insérer vide (pas de saut de ligne)
+        return ''
+    html = _image_pattern.sub(image_repl, html)
+
+    # Remplacer les tableaux [[tableau:name|options]]
+    def tableau_repl(match):
+        name = match.group(1)
+        options_str = match.group(2) or ""
+        param_value = param_values.get(name)
+
+        # DEBUG: Log pour diagnostiquer le problème
+        logger.info(f"DEBUG tableau_repl: name={name}, param_value={param_value}")
+        logger.info(f"DEBUG tableau_repl: param_values keys={list(param_values.keys())}")
+
+        if param_value is None:
+            # Essayer de récupérer le paramètre depuis la base de données
+            try:
+                from exo.models import ParamItem
+                param_item = ParamItem.objects.filter(name=name).first()
+                if param_item and param_item.kind == 'tableau':
+                    param_value = {
+                        'orientation': param_item.tableau_orientation,
+                        'header': param_item.tableau_header,
+                        'rows': param_item.tableau_rows.split('\n') if param_item.tableau_rows else []
+                    }
+                    logger.info(f"DEBUG tableau_repl: Paramètre récupéré depuis la DB: {param_value}")
+                else:
+                    return f'<div class="text-red-600">Paramètre tableau "{name}" non trouvé</div>'
+            except Exception as e:
+                logger.error(f"Erreur récupération paramètre {name}: {e}")
+                return f'<div class="text-red-600">Erreur paramètre tableau "{name}": {str(e)}</div>'
+
+        # Parser les options (format: view=eleve|orientation=h|n=3)
+        options = {}
+        if options_str:
+            for option in options_str.split('|'):
+                if '=' in option:
+                    key, value = option.split('=', 1)
+                    options[key.strip()] = value.strip()
+
+        # Valeurs par défaut
+        view = options.get('view', 'eleve')
+        orientation = options.get('orientation', param_value.get('orientation', 'h'))
+        n = int(options.get('n', '3'))
+
+        import secrets, hashlib
+
+        # Seed partagé pour TOUT le rendu (stable énoncé/corrigé), différent à chaque refresh
+        base_seed = context.get('K', 1)
+        render_seed = context.get('__render_seed')
+        if render_seed is None:
+            render_seed = secrets.randbits(32)
+            context['__render_seed'] = render_seed
+
+        # Cache local (par rendu) pour stabiliser un param précis sur toute la page
+        cache = context.get('__table_seed_cache')
+        if cache is None:
+            cache = {}
+            context['__table_seed_cache'] = cache
+
+        # Option manuelle : [[tableau:...|seed=12345]]
+        opt_seed = options.get('seed')
+        if opt_seed is not None:
+            unique_seed = int(opt_seed)
+        else:
+            if name not in cache:
+                seed_string = f"{render_seed}_{name}"
+                cache[name] = int(hashlib.md5(seed_string.encode()).hexdigest()[:8], 16)
+            unique_seed = cache[name]
+
+        # Importer et utiliser notre template tag
+        try:
+            # Créer un contexte avec les paramètres nécessaires
+            from django.template import Context
+            temp_context = Context({
+                'exo_params': {name: param_value},
+                'K': base_seed
+            })
+            from exo.templatetags.exo_tables import render_param_table
+            result = render_param_table(temp_context, name, view, orientation, n, unique_seed)
+            return str(result)
+        except Exception as e:
+            return f'<div class="text-red-600">Erreur rendu tableau "{name}": {str(e)}</div>'
+
+    html = _tableau_pattern.sub(tableau_repl, html)
+
+    # Nettoyage: retirer des paragraphes isolés "image" ou "caption" autour
+    html = re.sub(r"(?i)<p[^>]*>\s*(image|caption)\s*</p>", "", html)
+    # Supprimer les tokens 'image' ou 'caption' collés au tag <img>
+    # ... 'image' juste avant l'img
+    html = re.sub(r"(?i)\bimage\b\s*(<img[^>]*>)", r"\1", html)
+    # ... 'caption' juste après l'img
+    html = re.sub(r"(?i)(<img[^>]*>)\s*\bcaption\b", r"\1", html)
+    # ... gérer 'image:' ou 'caption:'
+    html = re.sub(r"(?i)\bimage\s*:\s*(<img[^>]*>)", r"\1", html)
+    html = re.sub(r"(?i)(<img[^>]*>)\s*:\s*\bcaption\b", r"\1", html)
+    # Nettoyage des listes de définitions (dl/dt/dd) générées par certains rendus
+    # Retirer les balises <dt>image</dt> / <dt>caption</dt>
+    html = re.sub(r"(?is)<dt[^>]*>\s*image\s*</dt>\s*", "", html)
+    html = re.sub(r"(?is)<dt[^>]*>\s*caption\s*</dt>\s*", "", html)
+    # Retirer les <dd> qui ne contiennent pas d'image (souvent le nom du fichier)
+    html = re.sub(r"(?is)<dd[^>]*>(?!.*<img)(.*?)</dd>", "", html)
+    # Si un <dd> contient un <img>, ne garder que l'<img>
+    html = re.sub(r"(?is)<dd[^>]*>.*?(<img[^>]*>).*?</dd>", r"\1", html)
+    # Nettoyer d'éventuels <dl> vides
+    html = re.sub(r"(?is)<dl[^>]*>\s*</dl>", "", html)
+
+    # Puis remplacer les [[name]] restants
+    rendered = _replace_placeholders(html, param_values)
+    logger.info(f"DEBUG render_with_params: HTML après = {rendered[:200]}...")
+    return mark_safe(rendered)
+
+
+
+===== /srv/pconline/exo/templatetags/exo_tables.py =====
+# exo/templatetags/exo_tables.py
+from django import template
+from django.utils.safestring import mark_safe
+from exo.blocks import StyledTableBlock
+from exo.utils.table_param import (
+    parse_table_bank, pick_rows, apply_masks_h, apply_masks_v,
+    to_tableblock_value_h, to_tableblock_value_v
+)
+
+register = template.Library()
+
+@register.simple_tag(takes_context=True)
+def render_param_table(context, name: str, view: str = "eleve", orientation: str = "h", n: int = 3, seed: int | None = None):
+    """
+    Rendu HTML du paramètre tableau `name`.
+    - `view` : 'eleve' (masques actifs) ou 'corrige' (masques levés)
+    - `orientation`: 'h' (entête ligne 1) ou 'v' (entête colonne 1)
+    - `n`: nombre de lignes/colonnes tirées (par défaut 3)
+    - `seed`: graine ; si None, tenter context['K'] (graine d'exo)
+    """
+    # Récup param depuis le contexte (ExoParamPage)
+    params = context.get("exo_params", {})
+    if name not in params:
+        return ""
+
+    base_seed = seed if seed is not None else context.get("K", 1)
+    # Varier la graine selon le nom du paramètre pour avoir des tirages différents
+    import hashlib
+    seed_string = f"{base_seed}_{name}"
+    seed = int(hashlib.md5(seed_string.encode()).hexdigest()[:8], 16)
+
+    bank = parse_table_bank({
+        "orientation": params[name].get("orientation", orientation),
+        "header": params[name]["header"],
+        "rows": params[name]["rows"],
+    })
+
+    # Tirage de n lignes (orientation h) ou n colonnes (orientation v)
+    picked = pick_rows(bank, n=n, seed=seed)
+
+    block = StyledTableBlock()
+
+    if bank.orientation == "v":
+        # picked = colonnes tirées ; appliquer masques par ligne (header vertical)
+        header, cols = apply_masks_v(bank.header, list(zip(*picked)) if picked else [], view=view)
+        # ^ on veut une liste de colonnes: transpose si nécessaire
+        value = to_tableblock_value_v(header, cols)
+    else:
+        # orientation horizontale
+        header, rows = apply_masks_h(bank.header, picked, view=view)
+        value = to_tableblock_value_h(header, rows)
+
+    html = block.render(value)
+    return mark_safe(html)
+
+===== /srv/pconline/exo/utils/table_param.py =====
+# exo/utils/table_param.py
+from dataclasses import dataclass
+from typing import List, Tuple, Dict, Any
+import random
+import copy
+
+MASK_PREFIX = "calc:"  # sémantique "masque" (PAS de token -> cellule vide)
+
+def _split_semicolons(s: str) -> List[str]:
+    return [c.strip() for c in s.split(";")]
+
+@dataclass
+class TableBank:
+    orientation: str  # 'h' (header row) or 'v' (header col)
+    header: List[str]           # pour 'h' : titres de colonnes ; pour 'v' : titres de lignes (1ère colonne)
+    rows: List[List[str]]       # banque brute de lignes (pour 'h') ou colonnes (pour 'v')
+
+# --- helpers de normalisation ---
+def _pad_row(row: List[str], n: int) -> List[str]:
+    if len(row) < n:
+        return row + [""] * (n - len(row))
+    if len(row) > n:
+        return row[:n-1] + [" / ".join(row[n-1:])]
+    return row
+
+
+def parse_table_bank(defn: Dict[str, Any]) -> TableBank:
+    """
+    defn = {
+      "orientation": "h"|"v",
+      "header": "A;B;C"
+      "rows": ["x;y;z", ...]
+    }
+    """
+    orientation = (defn.get("orientation") or "h").lower()
+    header = _split_semicolons(defn["header"])
+    rows = [_split_semicolons(r) for r in defn.get("rows", [])]
+    return TableBank(orientation=orientation, header=header, rows=rows)
+
+def _is_mask(s: str) -> bool:
+    return isinstance(s, str) and s.startswith(MASK_PREFIX)
+
+def _strip_mask(s: str) -> str:
+    return s[len(MASK_PREFIX):].strip()
+
+def pick_rows(bank: TableBank, n: int, seed: int) -> List[List[str]]:
+    rng = random.Random(seed)
+    pool = copy.deepcopy(bank.rows)
+    rng.shuffle(pool)
+    return pool[:max(0, min(n, len(pool)))]
+
+def apply_masks_h(header: List[str], rows: List[List[str]], view: str) -> Tuple[List[str], List[List[str]]]:
+    head = header[:]
+    col_mask = [_is_mask(h) for h in head]
+    head = [_strip_mask(h) if m else h for h, m in zip(head, col_mask)]
+
+    if view == "corrige":
+        fixed = [[_strip_mask(c) if _is_mask(c) else c for c in row] for row in rows]
+        return head, fixed
+
+    out_rows = []
+    for row in rows:
+        new_row = []
+        for j, cell in enumerate(row):
+            if col_mask[j]:
+                new_row.append("")
+            else:
+                new_row.append("" if _is_mask(cell) else cell)
+        out_rows.append(new_row)
+    return head, out_rows
+
+def apply_masks_v(header: List[str], cols: List[List[str]], view: str) -> Tuple[List[str], List[List[str]]]:
+    head = header[:]
+    row_mask = [_is_mask(h) for h in head]
+    head = [_strip_mask(h) if m else h for h, m in zip(head, row_mask)]
+
+    if view == "corrige":
+        fixed_cols = []
+        for col in cols:
+            fixed_cols.append([_strip_mask(c) if _is_mask(c) else c for c in col])
+        return head, fixed_cols
+
+    masked_cols = []
+    for col in cols:
+        masked_cols.append([
+            "" if row_mask[i] or _is_mask(col[i]) else col[i]
+            for i in range(len(col))
+        ])
+    return head, masked_cols
+
+# --- Normalisation en sortie StyledTableBlock ---
+def to_tableblock_value_h(header: List[str], rows: List[List[str]]) -> Dict[str, Any]:
+    n = len(header)
+    norm = [_pad_row(r, n) for r in rows]
+    data = [header] + norm
+    return {
+        "data": data,
+        "first_row_is_table_header": True,
+        "first_col_is_header": False,
+    }
+
+def to_tableblock_value_v(header: List[str], cols: List[List[str]]) -> Dict[str, Any]:
+    n_rows = len(header)
+    cols = [c[:n_rows] + [""]*(n_rows - len(c)) if len(c) < n_rows else c[:n_rows] for c in cols]
+    top = [""] + [f"Col {i+1}" for i in range(len(cols))]
+    data = [top]
+    for i, h in enumerate(header):
+        data.append([h] + [col[i] for col in cols])
+    return {
+        "data": data,
+        "first_row_is_table_header": True,
+        "first_col_is_header": False,
+    }
+
+===== /srv/pconline/exo/templates/exo/page_simple.html =====
+{% extends "base.html" %}
+{% load static %}
+{% load wagtailcore_tags %}
+{% load param_tags %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-[800px] mx-auto px-4 py-8">
+    <!-- En-tête de l'exercice -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-blue-800 mb-4">{{ page.title }}</h1>
+        
+        <!-- Bandeau mobile avec infos -->
+        <div class="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center justify-between text-sm">
+                <span class="font-medium">{{ page.total_points }} points</span>
+                <span>{{ page.estimated_time_min }} min</span>
+                <span class="text-gray-600">Niveau {{ page.difficulty }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grille principale : contenu + barème -->
+    <div class="md:grid md:grid-cols-[9fr_1fr] gap-6">
+        <!-- Contenu de l'exercice (90%) -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <!-- Contenu flexible : énoncé et questions mélangés -->
+            {% if page.contenu %}
+                {% for block in page.contenu %}
+                    {% render_with_params block param_values %}
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Barème (desktop) -->
+        <div class="hidden md:block">
+            {% include "exo/_barre_bareme.html" %}
+        </div>
+    </div>
+</div>
+
+<!-- Configuration MathJax -->
+{% block mathjax %}{% include "exo/_mathjax_config.html" %}{% endblock %}
+{% endblock %}
+
+===== /srv/pconline/generator/templates/generator/qcm_preview.html =====
+{% extends "base.html" %}
+{% load wagtailimages_tags %}
+{% load param_tags %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold mb-4">
+    Prévisualisation ({{ type|upper }})
+    {% if type == "ds" %}
+      — Total : {{ barreme_total }}/{{ barreme_cible }}
+    {% endif %}
+  </h1>
+
+  <!-- Boutons de génération PDF -->
+  <div class="flex items-center gap-3 my-4">
+    <span class="text-sm text-gray-600">Seed: <code id="seedVal">{{ seed_effective }}</code></span>
+    <button id="btnCopySeed" class="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Copier seed</button>
+
+    <a href="{% url 'qcm_pdf_enonce' %}?seed={{ seed_effective }}"
+       class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Générer PDF Énoncé</a>
+
+    <a href="{% url 'qcm_pdf_correction' %}?seed={{ seed_effective }}"
+       class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">Générer PDF Correction</a>
+  </div>
+  <script>
+    document.getElementById('btnCopySeed')?.addEventListener('click', async () => {
+      const seed = document.getElementById('seedVal')?.textContent?.trim();
+      if (seed) {
+        await navigator.clipboard.writeText(seed);
+        alert('Seed copiée: ' + seed);
+      }
+    });
+  </script>
+
+  <!-- Récap configuration -->
+  <div class="mb-6 p-4 rounded bg-slate-50 border border-slate-200 text-sm text-slate-700">
+    <h2 class="font-semibold mb-2">Paramètres :</h2>
+    <ul class="space-y-1">
+      <li>🔹 QCM min : {{ ds_qcm_min }} | max : {{ ds_qcm_max }} (activés : {{ ds_qcm_enable|yesno:"✅ Oui,❌ Non" }})</li>
+      <li>🔹 Flashcards min : {{ ds_qr_min }} | max : {{ ds_qr_max }} (activées : {{ ds_qr_enable|yesno:"✅ Oui,❌ Non" }})</li>
+      <li>🔹 Exercice Application : {{ ds_exo_application_enable|yesno:"✅ Oui,❌ Non" }}</li>
+      <li>🔹 Exercice Entraînement : {{ ds_exo_entrainement_enable|yesno:"✅ Oui,❌ Non" }}</li>
+      <li>🔹 Exercice Approfondissement : {{ ds_exo_approfondissement_enable|yesno:"✅ Oui,❌ Non" }}</li>
+      {% if type == "ds" %}
+        <li>🔹 Barème cible : {{ barreme_cible }} pts</li>
+        <li>🔹 Barème obtenu : {{ barreme_total }} pts</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  {% if qcms %}
+    <h2 class="text-xl font-semibold mb-4">A. QCM</h2>
+    {% for item in qcms %}
+      <div class="mb-8 pb-6 border-b border-slate-200">
+        <div class="flex flex-col md:flex-row md:items-start md:gap-6">
+          <div class="flex-1">
+            <div class="font-semibold mb-1">Question {{ forloop.counter }} :</div>
+            <div class="prose max-w-none">{{ item.statement|safe }}</div>
+          </div>
+          {% if item.image %}
+            <div class="mt-3 md:mt-0 md:w-56">
+              {% image item.image max-400x300 class="rounded shadow" %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="mt-3 flex items-start justify-between gap-6">
+          <ul class="list-none space-y-2 flex-1">
+            {% for opt in item.options %}
+              <li class="flex items-start gap-2 {% if forloop.counter == item.correct_index %}text-green-700 font-bold{% endif %}">
+                <span class="shrink-0">[ ] {{ "ABCD"|slice:forloop.counter0 }})</span>
+                <span class="prose max-w-none">{{ opt|safe }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <div class="text-right whitespace-nowrap text-sm text-slate-600">
+            ({{ item.points }} pt)
+          </div>
+        </div>
+
+        <div class="mt-3 p-3 rounded bg-green-50 border border-green-200 text-green-800">
+          <span class="font-medium">Correction :</span>
+          <span>✅ {{ item.correct_letter }}) </span>
+          <span class="prose inline max-w-none">{{ item.correct_text|safe }}</span>
+        </div>
+      </div>
+    {% empty %}
+      <div class="text-slate-600">Aucun QCM disponible.</div>
+    {% endfor %}
+  {% endif %}
+
+  {% if qa_cards %}
+    <hr class="my-8">
+    <h2 class="text-xl font-semibold mb-4">B. Questions / Réponses</h2>
+    {% for qa in qa_cards %}
+      <div class="mb-4">
+        <div class="font-semibold text-slate-900 mb-1">Question :</div>
+        <div class="prose max-w-none">{{ qa.question_html|safe }}</div>
+        {% if qa.image %}
+          <div class="mt-3">{% image qa.image max-600x400 class="rounded shadow" %}</div>
+        {% endif %}
+        <div class="mt-2 font-medium text-green-600">
+          Réponse : <span class="prose max-w-none align-middle">{{ qa.answer_html|safe }}</span>
+        </div>
+      </div>
+      {% if not forloop.last %}
+        <hr class="my-6">
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  {% if exercices %}
+    <hr class="my-8">
+    <h2 class="text-xl font-semibold mb-4">C. Exercices</h2>
+    {% for exercice in exercices %}
+      <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">{{ exercice.title }}</span>
+        {% if exercice.total_points %}
+          <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">{{ exercice.total_points }} points</span>
+        {% endif %}
+        {% if exercice.estimated_time_min %}
+          <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">{{ exercice.estimated_time_min }} min</span>
+        {% endif %}
+        {% if exercice.difficulty %}
+          <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">Niveau {{ exercice.difficulty }}</span>
+        {% endif %}
+      </div>
+      <div class="bg-white rounded-lg shadow-md p-4">
+        {% if exercice.page %}
+          {% for block in exercice.page.contenu %}
+            {% if block.block_type == 'question' %}
+              <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-lg font-semibold text-gray-900">
+                    {{ block.value.numero }}
+                    <span class="text-sm font-normal text-gray-600 ml-2">
+                      ({{ block.value.points|floatformat:2 }} pt)
+                    </span>
+                  </h3>
+                </div>
+                <div class="prose max-w-none mb-4">
+                  {% for child in block.value.content %}
+                    {% if exercice.param_values %}
+                      {% render_with_params child exercice.param_values %}
+                    {% else %}
+                      {{ child }}
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                {% if block.value.solution %}
+                  <div class="border-t pt-4">
+                    <div class="mt-4 prose max-w-none text-green-700">
+                      {% for child in block.value.solution %}
+                        {% if exercice.param_values %}
+                          {% render_with_params child exercice.param_values %}
+                        {% else %}
+                          {{ child }}
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              {% if exercice.param_values %}
+                {% render_with_params block exercice.param_values %}
+              {% else %}
+                {{ block }}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <div class="prose max-w-none text-red-600">⚠️ Exercice sans contenu.</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endblock %}
+

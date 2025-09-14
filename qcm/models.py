@@ -34,12 +34,13 @@ class QcmQuestionAOption(Orderable):
         verbose_name_plural = "Propositions"
 
 
-class QcmQuestionAPage(Page):
+class QcmQuestionAStatement(Orderable):
     """
-    Question MCQ complète.
-    Enfant direct de cours.CoursPage.
+    Un énoncé (question) appartenant à une page QCM Type A.
+    Permet d'avoir plusieurs questions avec les mêmes propositions.
     """
-    template = "qcm/qcm_question_a_page.html"
+    page = ParentalKey("qcm.QcmQuestionAPage", on_delete=models.CASCADE, related_name="statements")
+    
     LAYOUT_CHOICES = [
         ("text", "100% texte"),
         ("text_media", "67% texte / 33% média"),
@@ -56,6 +57,25 @@ class QcmQuestionAPage(Page):
     )
     video_url = models.URLField(blank=True)
 
+    panels = [
+        FieldPanel("layout"),
+        FieldPanel("statement"),
+        FieldPanel("image"),
+        FieldPanel("video_url"),
+    ]
+
+    class Meta(Orderable.Meta):
+        verbose_name = "Énoncé"
+        verbose_name_plural = "Énoncés"
+
+
+class QcmQuestionAPage(Page):
+    """
+    Question MCQ complète avec possibilité de plusieurs énoncés.
+    Enfant direct de cours.CoursPage.
+    """
+    template = "qcm/qcm_question_a_page.html"
+
     sans_redaction = models.BooleanField(
         default=True, help_text="QCM sans rédaction (cochez pour QCM simple, décochez pour QCM avec justification écrite)"
     )
@@ -68,12 +88,7 @@ class QcmQuestionAPage(Page):
     subpage_types = []
 
     content_panels = Page.content_panels + [
-        MultiFieldPanel([
-            FieldPanel("layout"),
-            FieldPanel("statement"),
-            FieldPanel("image"),
-            FieldPanel("video_url"),
-        ], heading="Énoncé"),
+        InlinePanel("statements", label="Énoncés (questions)"),
         InlinePanel("options", label="Propositions (≥4, max 100)"),
         MultiFieldPanel([
             FieldPanel("sans_redaction"),

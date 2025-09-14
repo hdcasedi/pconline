@@ -1,0 +1,57 @@
+% generator/templates/generator/pdf/header.tex
+% Attend que main.tex ait défini :
+% \typeDS, \ds, \serie, \titre, \baremeGlobal, \sousTitreUn, \sousTitreDeux,
+% \headerLineUn, \headerLineDeux, \headerLineTrois, \classe, \nomPrenom, \isCorrection
+% ainsi que \ifHAVELOGO et la variable de template {{ header_logo_path }}
+
+\noindent
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} p{0.68\textwidth} p{0.28\textwidth}}
+  \normalsize \nomPrenom & \raggedleft \normalsize Classe : \classe\\
+\end{tabular*}
+
+\vspace{0.25cm}
+
+\noindent
+\begin{tikzpicture}[x=1cm,y=1cm, line width=0.5pt]
+
+  % Dimensions
+  \pgfmathsetmacro{\X}{\textwidth/1cm}
+  \def\H{2}
+
+  % Cadres
+  \draw (0,0) rectangle (\X,\H);     % grand rectangle
+  \draw (0,0) rectangle (2,\H);      % pavé gauche
+
+  % Pavé droit (barème) uniquement en DS
+  \ifx\typeDS\ds
+    \draw (\X-2,0) rectangle (\X,\H);
+    \draw (\X-2,0) -- (\X,\H);
+  \fi
+
+  % Contenu pavé gauche : logo OU 3 lignes
+  \ifHAVELOGO
+    \node at (1,1) {\includegraphics[width=2cm,height=2cm,keepaspectratio]{\headerLogoPath}};
+  \else
+    \node[align=center] at (1,1.35) {\large\bfseries \headerLineUn};
+    \node[align=center] at (1,1.00) {\small \headerLineDeux};
+    \node[align=center] at (1,0.65) {\small \headerLineTrois};
+  \fi
+
+  % Abscisse du bloc central (diffère entre DS et Série)
+  \ifx\typeDS\ds
+    \pgfmathsetmacro{\XC}{\X/2}
+  \else
+    \pgfmathsetmacro{\XC}{(\X+2)/2}
+  \fi
+
+  % Titre et sous-titres
+  \node[align=center] at (\XC,1.45) {\Large \bfseries \titre \ifnum\isCorrection=1 ~|~ Correction\fi};
+  \node[align=center] at (\XC,0.95) {\normalsize \sousTitreUn};
+  \node[align=center] at (\XC,0.55) {\normalsize \sousTitreDeux};
+
+  % Barème (DS)
+  \ifx\typeDS\ds
+    \node[align=center] at (\X-0.5,0.7) {\Large \bfseries \baremeGlobal};
+  \fi
+
+\end{tikzpicture}

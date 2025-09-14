@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load wagtailimages_tags %}
+{% load param_tags %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold mb-4">
+    Prévisualisation ({{ type|upper }})
+    {% if type == "ds" %}
+      — Total : {{ barreme_total }}/{{ barreme_cible }}
+    {% endif %}
+  </h1>
+
+  <!-- Boutons de génération PDF -->
+  <div class="flex items-center gap-3 my-4">
+    <span class="text-sm text-gray-600">Seed: <code id="seedVal">{{ seed_effective }}</code></span>
+    <button id="btnCopySeed" class="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Copier seed</button>
+
+    <a href="{% url 'qcm_pdf_enonce' %}?seed={{ seed_effective }}"
+       class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Générer PDF Énoncé</a>
+
+    <a href="{% url 'qcm_pdf_correction' %}?seed={{ seed_effective }}"
+       class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">Générer PDF Correction</a>
+  </div>
+  <script>
+    document.getElementById('btnCopySeed')?.addEventListener('click', async () => {
+      const seed = document.getElementById('seedVal')?.textContent?.trim();
+      if (seed) {
+        await navigator.clipboard.writeText(seed);
+        alert('Seed copiée: ' + seed);
+      }
+    });
+  </script>
+
+  <!-- Récap configuration -->
+  <div class="mb-6 p-4 rounded bg-slate-50 border border-slate-200 text-sm text-slate-700">
+    <h2 class="font-semibold mb-2">Paramètres :</h2>
+    <ul class="space-y-1">
+      <li>🔹 QCM min : {{ ds_qcm_min }} | max : {{ ds_qcm_max }} (activés : {{ ds_qcm_enable|yesno:"✅ Oui,❌ Non" }})</li>
+      <li>🔹 Flashcards min : {{ ds_qr_min }} | max : {{ ds_qr_max }} (activées : {{ ds_qr_enable|yesno:"✅ Oui,❌ Non" }})</li>
+      <li>🔹 Exercice Application : {{ ds_exo_application_enable|yesno:"✅ Oui,❌ Non" }}</li>
+      <li>🔹 Exercice Entraînement : {{ ds_exo_entrainement_enable|yesno:"✅ Oui,❌ Non" }}</li>
+      <li>🔹 Exercice Approfondissement : {{ ds_exo_approfondissement_enable|yesno:"✅ Oui,❌ Non" }}</li>
+      {% if type == "ds" %}
+        <li>🔹 Barème cible : {{ barreme_cible }} pts</li>
+        <li>🔹 Barème obtenu : {{ barreme_total }} pts</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  {% if qcms %}
+    <h2 class="text-xl font-semibold mb-4">A. QCM</h2>
+    {% for item in qcms %}
+      <div class="mb-8 pb-6 border-b border-slate-200">
+        <div class="flex flex-col md:flex-row md:items-start md:gap-6">
+          <div class="flex-1">
+            <div class="font-semibold mb-1">Question {{ forloop.counter }} :</div>
+            <div class="prose max-w-none">{{ item.statement|safe }}</div>
+          </div>
+          {% if item.image %}
+            <div class="mt-3 md:mt-0 md:w-56">
+              {% image item.image max-400x300 class="rounded shadow" %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="mt-3 flex items-start justify-between gap-6">
+          <ul class="list-none space-y-2 flex-1">
+            {% for opt in item.options %}
+              <li class="flex items-start gap-2 {% if forloop.counter == item.correct_index %}text-green-700 font-bold{% endif %}">
+                <span class="shrink-0">[ ] {{ "ABCD"|slice:forloop.counter0 }})</span>
+                <span class="prose max-w-none">{{ opt|safe }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <div class="text-right whitespace-nowrap text-sm text-slate-600">
+            ({{ item.points }} pt)
+          </div>
+        </div>
+
+        <div class="mt-3 p-3 rounded bg-green-50 border border-green-200 text-green-800">
+          <span class="font-medium">Correction :</span>
+          <span>✅ {{ item.correct_letter }}) </span>
+          <span class="prose inline max-w-none">{{ item.correct_text|safe }}</span>
+        </div>
+      </div>
+    {% empty %}
+      <div class="text-slate-600">Aucun QCM disponible.</div>
+    {% endfor %}
+  {% endif %}
+
+  {% if qa_cards %}
+    <hr class="my-8">
+    <h2 class="text-xl font-semibold mb-4">B. Questions / Réponses</h2>
+    {% for qa in qa_cards %}
+      <div class="mb-4">
+        <div class="font-semibold text-slate-900 mb-1">Question :</div>
+        <div class="prose max-w-none">{{ qa.question_html|safe }}</div>
+        {% if qa.image %}
+          <div class="mt-3">{% image qa.image max-600x400 class="rounded shadow" %}</div>
+        {% endif %}
+        <div class="mt-2 font-medium text-green-600">
+          Réponse : <span class="prose max-w-none align-middle">{{ qa.answer_html|safe }}</span>
+        </div>
+      </div>
+      {% if not forloop.last %}
+        <hr class="my-6">
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  {% if exercices %}
+    <hr class="my-8">
+    <h2 class="text-xl font-semibold mb-4">C. Exercices</h2>
+    {% for exercice in exercices %}
+      <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">{{ exercice.title }}</span>
+        {% if exercice.total_points %}
+          <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">{{ exercice.total_points }} points</span>
+        {% endif %}
+        {% if exercice.estimated_time_min %}
+          <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">{{ exercice.estimated_time_min }} min</span>
+        {% endif %}
+        {% if exercice.difficulty %}
+          <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">Niveau {{ exercice.difficulty }}</span>
+        {% endif %}
+      </div>
+      <div class="bg-white rounded-lg shadow-md p-4">
+        {% if exercice.page %}
+          {% for block in exercice.page.contenu %}
+            {% if block.block_type == 'question' %}
+              <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-lg font-semibold text-gray-900">
+                    {{ block.value.numero }}
+                    <span class="text-sm font-normal text-gray-600 ml-2">
+                      ({{ block.value.points|floatformat:2 }} pt)
+                    </span>
+                  </h3>
+                </div>
+                <div class="prose max-w-none mb-4">
+                  {% for child in block.value.content %}
+                    {% if exercice.param_values %}
+                      {% render_with_params child exercice.param_values %}
+                    {% else %}
+                      {{ child }}
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                {% if block.value.solution %}
+                  <div class="border-t pt-4">
+                    <div class="mt-4 prose max-w-none text-green-700">
+                      {% for child in block.value.solution %}
+                        {% if exercice.param_values %}
+                          {% render_with_params child exercice.param_values %}
+                        {% else %}
+                          {{ child }}
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              {% if exercice.param_values %}
+                {% render_with_params block exercice.param_values %}
+              {% else %}
+                {{ block }}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <div class="prose max-w-none text-red-600">⚠️ Exercice sans contenu.</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

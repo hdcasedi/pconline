@@ -116,20 +116,28 @@ def select_questions_from_chapters(chapter_ids: List[int], total: int = 10, shuf
                     
                 options = extract_options_from_type_a(q)
                 if options:
+                    # Sélectionner UN SEUL énoncé parmi tous les énoncés disponibles
+                    statements = list(q.statements.all())
+                    if not statements:
+                        continue  # Pas d'énoncés, on saute
+                        
+                    # Choisir un énoncé au hasard
+                    statement = random.choice(statements)
+                    
                     # Convertir l'image en URL si elle existe
                     image_url = ""
-                    if q.image:
+                    if statement.image:
                         try:
-                            image_url = q.image.get_rendition('max-400x300').url
+                            image_url = statement.image.get_rendition('max-400x300').url
                         except:
                             image_url = ""
                     
                     all_questions.append({
                         "type": "A",
-                        "statement": q.statement,
+                        "statement": statement.statement,
                         "image_url": image_url,
-                        "video_url": q.video_url or "",
-                        "layout": q.layout,
+                        "video_url": statement.video_url or "",
+                        "layout": statement.layout,
                         "options": options,
                         "explanation": getattr(q, "explanation", "") or "",
                     })

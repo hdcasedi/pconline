@@ -106,6 +106,37 @@
         </div>
         <p class="text-xs text-gray-500">Référence à d'autres paramètres avec [[nom_paramètre]]</p>
     </div>
+{% elif param.kind == 'tableau' %}
+    <!-- Tableau → orientation + entête + lignes -->
+    <div class="param-field param-field-tableau mt-3 space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Orientation</label>
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        data-field="tableau_orientation">
+                    <option value="h" {% if param.tableau_orientation == 'h' %}selected{% endif %}>Horizontal (entête ligne)</option>
+                    <option value="v" {% if param.tableau_orientation == 'v' %}selected{% endif %}>Vertical (entête colonne)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Entête</label>
+                <input type="text"
+                       value="{{ param.tableau_header }}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                       placeholder="Titre1;Titre2;Titre3"
+                       data-field="tableau_header">
+                <p class="text-xs text-gray-500 mt-1">Titres séparés par des points-virgules</p>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Lignes</label>
+            <textarea class="autosize w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      rows="3"
+                      placeholder="Ligne1_Col1;Ligne1_Col2;Ligne1_Col3&#10;Ligne2_Col1;Ligne2_Col2;Ligne2_Col3"
+                      data-field="tableau_rows">{{ param.tableau_rows }}</textarea>
+            <p class="text-xs text-gray-500 mt-1">Chaque ligne sur une nouvelle ligne, valeurs séparées par des points-virgules</p>
+        </div>
+    </div>
 {% endif %}
 
 

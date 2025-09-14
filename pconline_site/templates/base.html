@@ -4,21 +4,52 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Physique Chimie Online{% endblock %}</title>
+  <!-- Tailwind CSS (avec config pour éviter l'avertissement production) -->
+  <script>
+    // Configuration Tailwind pour éviter l'avertissement de production
+    window.tailwind = {
+      config: {
+        mode: 'jit',
+        content: [],
+        theme: {
+          extend: {},
+        },
+        plugins: [],
+      }
+    };
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+
+  <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Configuration MathJax robuste -->
   <script>
     window.MathJax = {
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
-        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true,
+        packages: {'[+]': ['color', 'mhchem']}
       },
-      options: { 
+      chtml: {
+        displayAlign: 'left',
+        displayIndent: '0'
+      },
+      options: {
         skipHtmlTags: ['script','noscript','style','textarea','pre','code'],
-        processHtmlClass: 'mathjax-content'
+        processHtmlClass: 'mathjax-content',
+        ignoreHtmlClass: 'tex2jax_ignore'
       },
-      svg: {
-        fontCache: 'global'
+      loader: {
+        load: ['[tex]/color', '[tex]/mhchem']
+      },
+      startup: {
+        ready: function () {
+          MathJax.startup.defaultReady();
+          console.log('MathJax est prêt');
+        }
       }
     };
   </script>
@@ -92,7 +123,7 @@
               <ul class="absolute left-0 mt-1 hidden w-56 rounded-lg bg-white shadow-lg border border-slate-200 group-hover:block">
                 <li><a href="/generateur-qcm/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur de QCM</a></li>
                 <li><a href="/generateur-flashcard/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur de Flashcards</a></li>
-                <li><a href="/generateurs/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur de Devoir</a></li>
+                <li><a href="/generator/devoir/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur de Devoir</a></li>
                 <li><a href="/generateur-quizzup/" class="block px-4 py-2 text-sm hover:bg-blue-50">Générateur QuizzUp</a></li>
               </ul>
             </li>
@@ -123,7 +154,7 @@
         <li><a href="/fiche-methode/" class="block px-4 py-2 hover:bg-blue-50">Comprendre</a></li>
         <li><a href="/generateur-qcm/" class="block px-4 py-2 hover:bg-blue-50">Générateur de QCM</a></li>
         <li><a href="/generateur-flashcard/" class="block px-4 py-2 hover:bg-blue-50">Générateur de Flashcards</a></li>
-        <li><a href="/generateurs/" class="block px-4 py-2 hover:bg-blue-50">Générateur de Devoir</a></li>
+        <li><a href="/generator/devoir/" class="block px-4 py-2 hover:bg-blue-50">Générateur de Devoir</a></li>
         <li><a href="/generateur-quizzup/" class="block px-4 py-2 hover:bg-blue-50">Générateur QuizzUp</a></li>
         <li><a href="/mon-compagnon/" class="block px-4 py-2 hover:bg-blue-50">Mon compagnon</a></li>
       </ul>

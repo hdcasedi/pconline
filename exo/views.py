@@ -265,7 +265,8 @@ def param_field(request, param_id):
         # Champs autorisés pour la mise à jour
         allowed_fields = [
             'const_value', 'range_min', 'range_max', 'range_step',
-            'set_text', 'slot_default', 'expr_code'
+            'set_text', 'slot_default', 'expr_code',
+            'tableau_orientation', 'tableau_header', 'tableau_rows'
         ]
 
         if field not in allowed_fields:

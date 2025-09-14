@@ -303,7 +303,6 @@ document.addEventListener('DOMContentLoaded', function() {
         select.addEventListener('change', function() {
             const paramId = this.dataset.paramId;
             const kind = this.value;
-            console.log('Select changed! paramId:', paramId, 'kind:', kind);
             updateParamConfig(paramId, kind);
         });
     });
@@ -352,23 +351,17 @@ function updateParamConfig(paramId, kind) {
 
     // Charger le template de configuration approprié
     const url = `/exo/param-config/${paramId}/?kind=${encodeURIComponent(kind)}`;
-    console.log('Fetching URL:', url);
 
     fetch(url)
         .then(res => {
-            console.log('Response status:', res.status);
             if (!res.ok) return res.text().then(t => { throw new Error(t || `HTTP ${res.status}`); });
             return res.text();
         })
         .then(html => {
-            console.log('Received HTML length:', html.length);
-            console.log('HTML preview:', html.substring(0, 200));
             configArea.innerHTML = html;
             initializeConfigArea(configArea);
-            console.log('Config area updated successfully');
         })
         .catch(err => {
-            console.error('param-config error:', err);
             configArea.innerHTML = '<div class="text-red-600 text-sm">Erreur chargement config: ' + err.message + '</div>';
         });
 }

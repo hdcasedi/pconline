@@ -7,6 +7,7 @@ from wagtail.blocks import (
     StructBlock, CharBlock, ChoiceBlock, RichTextBlock,
     BooleanBlock, TextBlock, StreamBlock, URLBlock
 )
+from wagtail.images.blocks import ImageChooserBlock
 from wagtail.contrib.table_block.blocks import TableBlock
 from wagtail.admin.forms import WagtailAdminPageForm
 from referentiel.models import Chapitre
@@ -95,6 +96,28 @@ class CodeBlock(StructBlock):
         label = "Code"
 
 
+class ImageBlock(StructBlock):
+    image = ImageChooserBlock(label="Image")
+    caption = CharBlock(required=False, label="Légende")
+    alt_text = CharBlock(required=False, label="Texte alternatif")
+
+    class Meta:
+        template = "cours/blocks/image.html"
+        icon = "image"
+        label = "Image centrée"
+
+
+class VideoBlock(StructBlock):
+    video_url = URLBlock(label="URL de la vidéo")
+    title = CharBlock(required=False, label="Titre de la vidéo")
+    description = TextBlock(required=False, label="Description")
+
+    class Meta:
+        template = "cours/blocks/video.html"
+        icon = "media"
+        label = "Vidéo centrée"
+
+
 # === NEW: Section 2 colonnes (50/50, 67/33, 33/67) ===
 from wagtail.blocks import StructBlock, ChoiceBlock, StreamBlock
 
@@ -116,6 +139,7 @@ class TwoColsBlock(StructBlock):
             ("titre", TitreBlock()),
             ("tableau", TableBlock()),
             ("code", CodeBlock()),
+            ("image", ImageBlock()),
         ],
         required=False,
         label="Colonne gauche"
@@ -126,6 +150,7 @@ class TwoColsBlock(StructBlock):
             ("titre", TitreBlock()),
             ("tableau", TableBlock()),
             ("code", CodeBlock()),
+            ("image", ImageBlock()),
         ],
         required=False,
         label="Colonne droite"
@@ -146,6 +171,7 @@ class ThreeColsBlock(StructBlock):
             ("titre", TitreBlock()),
             ("tableau", TableBlock()),
             ("code", CodeBlock()),
+            ("image", ImageBlock()),
         ],
         required=False,
         label="Colonne 1"
@@ -156,6 +182,7 @@ class ThreeColsBlock(StructBlock):
             ("titre", TitreBlock()),
             ("tableau", TableBlock()),
             ("code", CodeBlock()),
+            ("image", ImageBlock()),
         ],
         required=False,
         label="Colonne 2"
@@ -166,6 +193,7 @@ class ThreeColsBlock(StructBlock):
             ("titre", TitreBlock()),
             ("tableau", TableBlock()),
             ("code", CodeBlock()),
+            ("image", ImageBlock()),
         ],
         required=False,
         label="Colonne 3"
@@ -214,6 +242,9 @@ class CoursContentBlock(StreamBlock):
     section_2cols = TwoColsBlock()
     section_3cols = ThreeColsBlock()
     formulaire = FormulaireBlock()
+    # Blocs image et vidéo centrés
+    image = ImageBlock()
+    video = VideoBlock()
 
 
 # ============== Pages ==============
@@ -363,7 +394,14 @@ class CoursPage(Page):
             if block.block_type == 'paragraphe':
                 v = block.value  # StructValue
                 try:
-                    if v.get('style') == 'definition':
+                    # Vérifier si c'est une définition par le style OU par le titre
+                    is_definition = (
+                        v.get('style') == 'definition' or
+                        (v.get('titre') and 'définition' in v.get('titre', '').lower()) or
+                        (v.get('titre') and 'definition' in v.get('titre', '').lower())
+                    )
+                    
+                    if is_definition:
                         titre = v.get('titre') or "Définition"
                         contenu = v.get('contenu')  # RichText (Wagtail)
                         # On construit un objet simple avec les mêmes attr que FlashcardItem
@@ -449,10 +487,19 @@ class CoursPage(Page):
             final_opts = [{"html": o.text, "is_correct": (o == correct)} for o in [correct, *distractors]]
             random.shuffle(final_opts)
 
+            # Sélectionner UN SEUL énoncé parmi tous les énoncés disponibles
+            statements = list(q.statements.all())
+            if not statements:
+                continue  # Pas d'énoncés, on saute
+                
+            # Choisir un énoncé au hasard
+            statement = random.choice(statements)
             payload_a.append({
                 "type": "A",
-                "statement": q.statement,
-                "image": q.image,  # Ajouter l'image
+                "statement": statement.statement,
+                "layout": statement.layout,
+                "image": statement.image,
+                "video_url": statement.video_url or "",
                 "options": final_opts,
                 "explanation": getattr(q, "explanation", ""),
             })

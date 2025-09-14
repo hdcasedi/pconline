@@ -110,10 +110,19 @@ def get_new_qcm_questions(request, cours_id):
             final_opts = [{"html": o.text, "is_correct": (o == correct)} for o in [correct, *distractors]]
             random.shuffle(final_opts)
 
+            # Sélectionner UN SEUL énoncé parmi tous les énoncés disponibles
+            statements = list(q.statements.all())
+            if not statements:
+                continue  # Pas d'énoncés, on saute
+                
+            # Choisir un énoncé au hasard
+            statement = random.choice(statements)
             payload_a.append({
                 "type": "A",
-                "statement": q.statement,
-                "image": q.image,
+                "statement": statement.statement,
+                "layout": statement.layout,
+                "image": statement.image,
+                "video_url": statement.video_url or "",
                 "options": final_opts,
                 "explanation": getattr(q, "explanation", ""),
             })

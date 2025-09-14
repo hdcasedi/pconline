@@ -1,31 +1,26 @@
 <script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['$', '$'], ['\\(', '\\)']],
-    displayMath: [['$$', '$$'], ['\\[', '\\]']],
-    processEscapes: true,
-    processEnvironments: true
-  },
-  chtml: {
-    displayAlign: 'left',
-    displayIndent: '0'
-  },
-  options: {
-    ignoreHtmlClass: 'tex2jax_ignore',
-    processHtmlClass: 'tex2jax_process'
-  }
-};
-</script>
-<script type="text/javascript" id="MathJax-script" async
-  src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js">
-</script>
-<script>
-// Charger mhchem explicitement
+// Configuration MathJax simplifiée pour les exercices
+// Éviter les conflits avec la configuration globale
+
+// Attendre que la page soit complètement chargée
 window.addEventListener('load', function() {
-  if (window.MathJax) {
-    MathJax.loader.load(['input/tex', 'output/chtml', '[tex]/mhchem']).then(function() {
-      MathJax.typesetPromise();
-    });
-  }
+  // Attendre que MathJax soit initialisé
+  setTimeout(function() {
+    try {
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        // Re-rendre seulement le contenu de l'exercice
+        const exerciseContent = document.querySelector('.bg-white.rounded-lg.shadow-md.p-6');
+        if (exerciseContent) {
+          MathJax.typesetPromise([exerciseContent]).then(function() {
+            console.log('MathJax rendu avec succès pour l\'exercice');
+          }).catch(function(err) {
+            console.log('Erreur MathJax (non critique):', err);
+          });
+        }
+      }
+    } catch (error) {
+      console.log('Erreur lors du rendu MathJax (non critique):', error);
+    }
+  }, 1000);
 });
 </script>

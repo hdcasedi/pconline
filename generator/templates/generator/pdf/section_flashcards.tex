@@ -1,0 +1,32 @@
+{% load latex %}
+
+{% if has_flashcards %}
+  % Si pas de QCM, on imprime l'entête "Exercice 1 -- Questions de cours" ici
+  {% if not has_qcms %}
+    \setcounter{exoTop}{1}
+    \noindent\textbf{Exercice \Roman{exoTop} -- Questions de cours}\par\vspace{4pt}
+  {% endif %}
+
+  % Titre de sous-section : "B." seulement s'il y a AUSSI des QCM
+  \noindent\textbf{
+    {% if has_qcms %}B. {% endif %}Questions
+    {% if flashcards_points_sum %} ({{ flashcards_points_sum|floatformat:0 }} pt){% endif %}
+  }\par\vspace{6pt}
+
+  % Liste des cartes
+  {% for card in flashcards %}
+    \vspace{0.5em}
+    \noindent
+    \begin{tabular}{@{}p{0.90\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+      \textbf{ {{ forloop.counter }}.\ }{{ card.question_html|safe|html2tex }} &
+      {% if card.points %}\textbf{ {{ card.points|floatformat:0 }} pt}{% endif %} \\
+    \end{tabular}
+
+    {% if is_correction and card.answer_html %}
+      \par\smallskip\noindent\textcolor{green}{\textbf{Réponse : }} {{ card.answer_html|safe|html2tex }}\par
+    {% endif %}
+    \vspace{1.2em}
+  {% empty %}
+    \noindent\emph{Aucune flashcard sélectionnée.}
+  {% endfor %}
+{% endif %}

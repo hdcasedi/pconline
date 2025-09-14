@@ -1,0 +1,179 @@
+{% load latex %}
+
+\documentclass[12pt,a4paper]{article}
+
+% ===== Encodage & langue =====
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% ===== Mise en page & graphismes =====
+\usepackage{geometry}
+\geometry{top=1.2cm, bottom=2cm, left=2cm, right=2cm}
+\usepackage{graphicx}
+\usepackage{array} % pour >{\raggedleft\arraybackslash} dans tabular
+\usepackage{tikz}
+
+% ===== Divers =====
+\usepackage{hyperref}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+% ===== CHEMISTRY & ROBUSTNESS =====
+% Compteur global des exercices
+\newcounter{exoTop}
+\makeatletter
+% Charger mhchem si pas déjà chargé
+\@ifpackageloaded{mhchem}{}{%
+  \IfFileExists{mhchem.sty}{%
+    \usepackage[version=4]{mhchem}%
+    \typeout{DEBUG: mhchem.sty FOUND -> LOADED}%
+  }{%
+    \typeout{DEBUG: mhchem.sty NOT FOUND -> FALLBACK ACTIVE}%
+  }%
+}
+% Fallback minimal si, pour une raison quelconque, mhchem n'est pas (ou n'a pas pu être) chargé :
+\@ifpackageloaded{mhchem}{%
+  \typeout{DEBUG: mhchem package is loaded at preamble.}%
+}{%
+  \providecommand{\ce}[1]{\textrm{#1}}% rend lisible sans planter
+}
+\makeatother
+
+% Atténue les Overfull \hbox (non bloquant)
+\setlength{\emergencystretch}{2em}
+
+\usepackage[none]{hyphenat}
+\sloppy
+
+% --- Macro standard pour ligne de réponse (flashcards) ---
+\newcommand{\AnswerLine}[1]{%
+  \par\smallskip\noindent\textbf{Réponse : }#1\par%
+}
+
+% ===== Unicode fixes (indices / exposants / symboles courants) =====
+\usepackage{newunicodechar}
+% Mapping Unicode -> LaTeX (grec, symboles courants)
+\DeclareUnicodeCharacter{03BB}{\ensuremath{\lambda}} % λ
+\DeclareUnicodeCharacter{03BC}{\ensuremath{\mu}}     % μ
+\DeclareUnicodeCharacter{03C0}{\ensuremath{\pi}}     % π
+\DeclareUnicodeCharacter{03B1}{\ensuremath{\alpha}}  % α
+\DeclareUnicodeCharacter{03B2}{\ensuremath{\beta}}   % β
+\DeclareUnicodeCharacter{03B3}{\ensuremath{\gamma}}  % γ
+\DeclareUnicodeCharacter{03B4}{\ensuremath{\delta}}  % δ
+\DeclareUnicodeCharacter{03B8}{\ensuremath{\theta}}  % θ
+\DeclareUnicodeCharacter{03C3}{\ensuremath{\sigma}}  % σ
+\DeclareUnicodeCharacter{03C4}{\ensuremath{\tau}}    % τ
+\DeclareUnicodeCharacter{03C6}{\ensuremath{\phi}}    % φ
+\DeclareUnicodeCharacter{03C9}{\ensuremath{\omega}}  % ω
+\DeclareUnicodeCharacter{0394}{\ensuremath{\Delta}}  % Δ
+\DeclareUnicodeCharacter{03A3}{\ensuremath{\Sigma}}  % Σ
+\DeclareUnicodeCharacter{03A9}{\ensuremath{\Omega}}  % Ω
+\DeclareUnicodeCharacter{00B0}{\ensuremath{^\circ}}  % °
+
+% Indices (₀..₉)
+\newunicodechar{₀}{$_0$}
+\newunicodechar{₁}{$_1$}
+\newunicodechar{₂}{$_2$}
+\newunicodechar{₃}{$_3$}
+\newunicodechar{₄}{$_4$}
+\newunicodechar{₅}{$_5$}
+\newunicodechar{₆}{$_6$}
+\newunicodechar{₇}{$_7$}
+\newunicodechar{₈}{$_8$}
+\newunicodechar{₉}{$_9$}
+
+% Exposants (⁰ ¹ ² ³ ⁴..⁹)
+\newunicodechar{⁰}{$^0$}
+\newunicodechar{¹}{$^1$}
+\newunicodechar{²}{$^2$}
+\newunicodechar{³}{$^3$}
+\newunicodechar{⁴}{$^4$}
+\newunicodechar{⁵}{$^5$}
+\newunicodechar{⁶}{$^6$}
+\newunicodechar{⁷}{$^7$}
+\newunicodechar{⁸}{$^8$}
+\newunicodechar{⁹}{$^9$}
+
+% Autres utiles
+\newunicodechar{°}{\textdegree}
+\newunicodechar{µ}{$\mu$}
+\newunicodechar{×}{$\times$}
+\newunicodechar{−}{$-$}  % signe moins U+221
+
+% =========================================================
+% Variables côté Jinja2 -> macros LaTeX attendues par l'entête
+% =========================================================
+% type ds / serie
+% Type DS (booléen LaTeX)
+\newif\ifDS
+{% if type == "ds" %}\DStrue{% else %}\DSfalse{% endif %}
+
+% titre / barème / sous-titres
+\def\titre{ {{ titre|tex }} }
+\def\baremeGlobal{ {{ barreme_obtenu|default:barreme_cible|default:0 }} }
+\def\sousTitreUn{ {{ sous_titre_1|tex }} }
+\def\sousTitreDeux{ {{ sous_titre_2|tex }} }
+
+% --- Logo: flag + chemin (pas d'include si vide) ---
+\newif\ifHAVELOGO
+{% if header_logo_path and header_logo_path != "" %}
+  \HAVELOGOtrue
+{% else %}
+  \HAVELOGOfalse
+{% endif %}
+
+
+
+% Définition du chemin du logo pour header.tex
+\def\headerLogoPath{ {{ header_logo_path|default:"" }} }
+
+% DEBUG: Afficher le chemin du logo
+\typeout{DEBUG: header_logo_path = {{ header_logo_path }}}
+\typeout{DEBUG: headerLogoPath = \headerLogoPath}
+
+% lignes du pavé gauche si pas de logo
+\def\headerLineUn{ {{ header_line1|default:""|tex }} }
+\def\headerLineDeux{ {{ header_line2|default:""|tex }} }
+\def\headerLineTrois{ {{ header_line3|default:""|tex }} }
+
+% classe / nom (tu peux les alimenter via payload si tu veux)
+\def\classe{ {{ classe|default:""|tex }} }
+\def\nomPrenom{ Nom et Prénom : }
+
+% énoncé (0) ou correction (1)
+\def\isCorrection{ {{ isCorrection|default:0 }} }
+
+\begin{document}
+
+% ===== ENTÊTE =====
+\input{header.tex}
+
+% ===== INFORMATION BARÈME AJUSTÉ =====
+{% if barreme_obtenu != barreme_cible %}
+\vspace{0.5cm}
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{
+\centering
+\textbf{Note :} Le barème a été ajusté de {{ barreme_cible }} points à {{ barreme_obtenu }} points\\
+en raison du nombre limité d'exercices disponibles.
+}}
+\end{center}
+\vspace{0.5cm}
+{% endif %}
+
+% ===== SECTION A : QCM =====
+{% if qcms|length > 0 %}
+\input{section_qcm.tex}
+{% endif %}
+
+% ===== SECTION B : Flashcards =====
+{% if flashcards|length > 0 %}
+\input{section_flashcards.tex}
+{% endif %}
+
+% ===== SECTION C : Exercices =====
+{% if exercices|length > 0 %}
+\input{section_exercices.tex}
+{% endif %}
+
+\end{document}

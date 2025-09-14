@@ -3,6 +3,10 @@ from wagtail.images.blocks import ImageChooserBlock
 from wagtail.contrib.table_block.blocks import TableBlock
 
 
+class StyledTableBlock(TableBlock):
+    template = "exo/blocks/styled_table.html"
+
+
 class ExoContentBlock(blocks.StreamBlock):
     """Blocs de contenu pour les exercices"""
     rich_text = blocks.RichTextBlock(
@@ -21,7 +25,20 @@ class ExoContentBlock(blocks.StreamBlock):
         ], default='python', label="Langage")),
         ('source', blocks.TextBlock(label="Code")),
     ], label="Code")
-    table = TableBlock(label="Tableau")
+    table = StyledTableBlock(label="Tableau")
+    # Sections disponibles dans les questions et solutions
+    section_50_50 = blocks.StructBlock([
+        ('left', blocks.RichTextBlock(features=['bold', 'italic', 'link', 'ol', 'ul', 'code'], label="Colonne gauche")),
+        ('right', blocks.RichTextBlock(features=['bold', 'italic', 'link', 'ol', 'ul', 'code'], label="Colonne droite")),
+    ], template="exo/blocks/section_content_50_50.html", label="Section 50/50")
+    section_70_30 = blocks.StructBlock([
+        ('left', blocks.RichTextBlock(features=['bold', 'italic', 'link', 'ol', 'ul', 'code'], label="Colonne gauche (70%)")),
+        ('right', blocks.RichTextBlock(features=['bold', 'italic', 'link', 'ol', 'ul', 'code'], label="Colonne droite (30%)")),
+    ], template="exo/blocks/section_content_70_30.html", label="Section 70/30")
+    section_75_25 = blocks.StructBlock([
+        ('left', blocks.RichTextBlock(features=['bold', 'italic', 'link', 'ol', 'ul', 'code'], label="Colonne gauche (75%)")),
+        ('right', blocks.RichTextBlock(features=['bold', 'italic', 'link', 'ol', 'ul', 'code'], label="Colonne droite (25%)")),
+    ], template="exo/blocks/section_content_75_25.html", label="Section 75/25")
 
     class Meta:
         template = "exo/blocks/exo_content.html"
@@ -67,6 +84,17 @@ class Section70_30Block(blocks.StructBlock):
         template = "exo/blocks/section_70_30.html"
         icon = "arrows-left-right"
         label = "Section 70/30"
+
+
+class Section75_25Block(blocks.StructBlock):
+    """Section gauche 75% / droite 25%"""
+    left = ExoContentBlock(label="Colonne gauche (75%)")
+    right = ExoContentBlock(label="Colonne droite (25%)")
+
+    class Meta:
+        template = "exo/blocks/section_75_25.html"
+        icon = "arrows-left-right"
+        label = "Section 75/25"
 
 
 class QuestionBlock(blocks.StructBlock):

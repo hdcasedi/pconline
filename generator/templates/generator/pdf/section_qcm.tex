@@ -1,0 +1,151 @@
+{% load latex %}
+
+% ====== QUESTIONS DE COURS : EN-TÊTE ======
+{% if has_qcms or has_flashcards %}
+  % Démarre l'exercice 1 une seule fois ici (si QCM présents)
+  \setcounter{exoTop}{1}
+  \noindent\textbf{Exercice \Roman{exoTop} -- Questions de cours}\par\vspace{4pt}
+{% endif %}
+
+% ====== TITRE DE SOUS-SECTION (A. si QCM + Flashcards, sinon sans lettre) ======
+{% if has_qcms %}
+  \noindent\textbf{
+    {% if has_flashcards %}A. {% endif %}QCM
+    {% if qcm_points_sum %} ({{ qcm_points_sum|floatformat:0 }} pt){% endif %}
+  }\par\vspace{6pt}
+{% endif %}
+
+% ============================
+% COMPTEUR
+% ============================
+\newcounter{qcmno}
+
+% ============================
+% MACROS ENONCE
+% ============================
+
+% QCM texte pur
+\newcommand{\QCMtexte}[6]{%
+  \stepcounter{qcmno}%
+  \noindent\textbf{\theqcmno.}~#1
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) #2 & B) #3 & \\
+    \multicolumn{2}{c}{} & \textbf{#6 pt} \\
+    C) #4 & D) #5 & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% QCM texte + image
+\newcommand{\QCMimage}[7]{%
+  \stepcounter{qcmno}%
+  \noindent
+  \begin{minipage}[t]{0.69\linewidth}
+    \textbf{\theqcmno.}~#1\par
+  \end{minipage}%
+  \hspace{0.02\linewidth}%
+  \begin{minipage}[t]{0.29\linewidth}
+    \vspace{-2pt}%
+    \includegraphics[width=\linewidth]{#2}
+  \end{minipage}
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) #3 & B) #4 & \\
+    \multicolumn{2}{c}{} & \textbf{#7 pt} \\
+    C) #5 & D) #6 & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% ============================
+% MACROS CORRECTION
+% ============================
+
+% QCM texte pur (bonne réponse en gras)
+\newcommand{\QCMtexteCorr}[7]{%
+  \stepcounter{qcmno}%
+  \noindent\textbf{\theqcmno.}~#1
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) \ifnum#7=1 \textbf{#2} \else #2 \fi &
+    B) \ifnum#7=2 \textbf{#3} \else #3 \fi & \\
+    \multicolumn{2}{c}{} & \textbf{#6 pt} \\
+    C) \ifnum#7=3 \textbf{#4} \else #4 \fi &
+    D) \ifnum#7=4 \textbf{#5} \else #5 \fi & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% QCM image (bonne réponse en gras)
+\newcommand{\QCMimageCorr}[8]{%
+  \stepcounter{qcmno}%
+  \noindent
+  \begin{minipage}[t]{0.69\linewidth}
+    \textbf{\theqcmno.}~#1\par
+  \end{minipage}%
+  \hspace{0.02\linewidth}%
+  \begin{minipage}[t]{0.29\linewidth}
+    \vspace{-2pt}%
+    \includegraphics[width=\linewidth]{#2}
+  \end{minipage}
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) \ifnum#8=1 \textbf{#3} \else #3 \fi &
+    B) \ifnum#8=2 \textbf{#4} \else #4 \fi & \\
+    \multicolumn{2}{c}{} & \textbf{#7 pt} \\
+    C) \ifnum#8=3 \textbf{#5} \else #5 \fi &
+    D) \ifnum#8=4 \textbf{#6} \else #6 \fi & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% ============================
+% SECTION
+% ============================
+
+{% for item in qcms %}
+  {% if item.has_image %}
+    {% if is_correction %}
+\QCMimageCorr{ {{ item.statement|tex }} }
+{ {{ item.image_path }} }
+{ {{ item.A|tex }} }
+{ {{ item.B|tex }} }
+{ {{ item.C|tex }} }
+{ {{ item.D|tex }} }
+{ {{ item.points|floatformat:0 }} }
+{ {{ item.correct_index }} }
+    {% else %}
+\QCMimage{ {{ item.statement|tex }} }
+{ {{ item.image_path }} }
+{ {{ item.A|tex }} }
+{ {{ item.B|tex }} }
+{ {{ item.C|tex }} }
+{ {{ item.D|tex }} }
+{ {{ item.points|floatformat:0 }} }
+    {% endif %}
+  {% else %}
+    {% if is_correction %}
+\QCMtexteCorr{ {{ item.statement|tex }} }
+{ {{ item.A|tex }} }
+{ {{ item.B|tex }} }
+{ {{ item.C|tex }} }
+{ {{ item.D|tex }} }
+{ {{ item.points|floatformat:0 }} }
+{ {{ item.correct_index }} }
+    {% else %}
+\QCMtexte{ {{ item.statement|tex }} }
+{ {{ item.A|tex }} }
+{ {{ item.B|tex }} }
+{ {{ item.C|tex }} }
+{ {{ item.D|tex }} }
+{ {{ item.points|floatformat:0 }} }
+    {% endif %}
+  {% endif %}
+{% empty %}
+\noindent\emph{Aucun QCM disponible.}
+{% endfor %}

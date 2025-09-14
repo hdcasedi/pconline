@@ -37,25 +37,54 @@ document.addEventListener('DOMContentLoaded', function() {
       'set': 'set', 'ensemble': 'set',
       'slot': 'slot',
       'image': 'image',
+      'tableau': 'tableau',
       'expr': 'expr', 'expression': 'expr'
     };
     const k = (kind || '').toString().trim().toLowerCase();
     const norm = mapKind[k] || 'const';
     const container = findParamContainer(select);
     if(!container) return;
+    
+    console.log('showTypeFor: kind=' + kind + ', norm=' + norm + ', container found=' + !!container);
+    
     // Masquer tous les champs de cette ligne paramètre
-    container.querySelectorAll('.param-field').forEach(function(el){ el.style.display='none'; });
+    container.querySelectorAll('.param-field').forEach(function(el){ 
+      el.style.display='none'; 
+      console.log('Masqué: ' + el.className);
+    });
+    
     // Afficher le groupe du type demandé
-    container.querySelectorAll('.param-field-' + norm).forEach(function(el){ el.style.display='block'; });
+    const fieldsToShow = container.querySelectorAll('.param-field-' + norm);
+    console.log('Champs à afficher pour ' + norm + ': ' + fieldsToShow.length);
+    fieldsToShow.forEach(function(el){ 
+      el.style.display='block'; 
+      console.log('Affiché: ' + el.className);
+    });
+    
     // Cas const: forcer l'affichage du champ const
     if(norm === 'const'){
       container.querySelectorAll('.param-field-const').forEach(function(el){ el.style.display='block'; });
     }
   }
   function bindAll(){
-    document.querySelectorAll('select[name$="-kind"]').forEach(function(select){
+    console.log('bindAll: Recherche des sélecteurs de type...');
+    const selects = document.querySelectorAll('select[name$="-kind"]');
+    console.log('bindAll: Trouvé ' + selects.length + ' sélecteurs');
+    
+    selects.forEach(function(select){
+      console.log('bindAll: Traitement sélecteur, valeur=' + select.value);
       showTypeFor(select, select.value);
-      select.addEventListener('change', function(){ showTypeFor(select, select.value); });
+      select.addEventListener('change', function(){ 
+        console.log('bindAll: Changement détecté, nouvelle valeur=' + this.value);
+        showTypeFor(select, this.value); 
+      });
+    });
+    
+    // Debug: vérifier la présence des champs de tableau
+    const tableauFields = document.querySelectorAll('.param-field-tableau');
+    console.log('bindAll: Champs tableau trouvés: ' + tableauFields.length);
+    tableauFields.forEach(function(field, index){
+      console.log('bindAll: Champ tableau ' + index + ': ' + field.className + ', display=' + field.style.display);
     });
   }
   bindAll();

@@ -1,0 +1,11 @@
+{% load wagtailimages_tags %}
+
+<div class="image-block text-center my-6">
+    <div class="flex justify-center items-center">
+        {% image value.image max-800x600 class="rounded-lg shadow-md" alt=value.alt_text %}
+    </div>
+    {% if value.caption %}
+        <p class="text-sm text-gray-600 mt-2 italic">{{ value.caption }}</p>
+    {% endif %}
+</div>
+

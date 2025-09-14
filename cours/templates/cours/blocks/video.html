@@ -1,0 +1,26 @@
+{% load wagtailcore_tags %}
+
+<div class="video-block text-center my-6">
+    <div class="flex justify-center items-center">
+        <div class="w-full max-w-4xl">
+            {% if value.title %}
+                <h4 class="text-lg font-semibold mb-3">{{ value.title }}</h4>
+            {% endif %}
+            
+            <div class="relative w-full" style="padding-bottom: 56.25%;">
+                <iframe 
+                    src="{{ value.video_url }}" 
+                    class="absolute top-0 left-0 w-full h-full rounded-lg shadow-md"
+                    frameborder="0" 
+                    allowfullscreen
+                    title="{{ value.title|default:'Vidéo' }}">
+                </iframe>
+            </div>
+            
+            {% if value.description %}
+                <p class="text-sm text-gray-600 mt-2">{{ value.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+

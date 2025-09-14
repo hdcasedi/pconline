@@ -64,19 +64,12 @@ class FlashcardSetPage(Page):
     """
     template = "flashcard/flashcards_set_page.html"
 
-    MODE_CHOICES = [
-        ('manual', 'Saisie manuelle'),
-        ('import', 'Import fichier (CSV / TXT)'),
-    ]
-
-    mode_creation = models.CharField(
-        max_length=10, choices=MODE_CHOICES, default='manual'
-    )
+    # Plus de mode - juste un fichier optionnel et un bouton d'import
     source_file = models.ForeignKey(
         Document, null=True, blank=True, on_delete=models.SET_NULL,
         related_name='+',
         help_text="CSV (UTF-8 ; ou ,) avec entêtes question,answer[,tags,video_url] "
-                  "ou TXT avec lignes 'question|||answer'."
+                  "ou TXT avec lignes 'question|||answer|||tags' (tags optionnel)."
     )
     import_strategy = models.CharField(
         max_length=10,
@@ -87,11 +80,10 @@ class FlashcardSetPage(Page):
 
     content_panels = Page.content_panels + [
         MultiFieldPanel([
-            FieldPanel('mode_creation'),
             FieldPanel('source_file'),
             FieldPanel('import_strategy'),
-        ], heading="Import (si mode import)"),
-        InlinePanel('cards', label="Cartes (mode manuel)"),
+        ], heading="Import de fichier (CSV/TXT)"),
+        InlinePanel('cards', label="Cartes"),
     ]
 
     # Arborescence
@@ -111,8 +103,22 @@ class FlashcardSetPage(Page):
             line = line.strip()
             if not line or '|||' not in line:
                 continue
-            q, a = line.split('|||', 1)
-            self.cards.create(question=q.strip(), answer=a.strip())
+            
+            # Diviser la ligne en parties (question, answer, tags optionnel)
+            parts = line.split('|||')
+            if len(parts) < 2:
+                continue
+                
+            q = parts[0].strip()
+            a = parts[1].strip()
+            tags = parts[2].strip() if len(parts) > 2 else ''
+            
+            # Nettoyer les caractères spéciaux problématiques
+            q = self._clean_text(q)
+            a = self._clean_text(a)
+            tags = self._clean_text(tags)
+            
+            self.cards.create(question=q, answer=a, tags=tags)
             created += 1
         return created
 
@@ -215,36 +221,36 @@ class FlashcardSetPage(Page):
 
     def clean(self):
         super().clean()
-        if self.mode_creation == 'import' and not self.source_file:
-            raise ValidationError({'source_file': "Fichier requis en mode import."})
+        # Plus de validation nécessaire
 
     def save(self, *args, **kwargs):
-        do_import = (self.mode_creation == 'import' and self.source_file is not None)
-        strategy = self.import_strategy
+        # Plus d'import automatique - juste sauvegarder
         super().save(*args, **kwargs)
 
-        if do_import:
-            f = self.source_file.file
-            try:
-                f.seek(0)
-            except Exception:
-                pass
-            raw = f.read()
-            created = 0
-            if strategy == 'replace':
-                # Supprimer les cartes existantes une par une pour éviter le problème avec FakeQuerySet
-                for card in self.cards.all():
-                    card.delete()
+    def import_from_file(self):
+        """Méthode pour importer manuellement depuis le fichier attaché"""
+        if not self.source_file:
+            return 0
+            
+        f = self.source_file.file
+        try:
+            f.seek(0)
+        except Exception:
+            pass
+        raw = f.read()
+        created = 0
+        
+        if self.import_strategy == 'replace':
+            # Supprimer les cartes existantes
+            for card in self.cards.all():
+                card.delete()
 
-            name = (self.source_file.title or "").lower()
-            if name.endswith('.txt'):
-                created = self._import_from_txt(raw.decode('utf-8', errors='ignore'))
-            else:
-                created = self._import_from_csv(raw)
+        name = (self.source_file.title or "").lower()
+        # Détecter le format par le contenu plutôt que par l'extension
+        text_content = raw.decode('utf-8', errors='ignore')
+        if name.endswith('.txt') or '|||' in text_content:
+            created = self._import_from_txt(text_content)
+        else:
+            created = self._import_from_csv(raw)
 
-            # Après l'import, passer automatiquement en mode manuel et supprimer le fichier source
-            self.mode_creation = 'manual'
-            self.source_file = None
-            self.import_strategy = 'append'  # Reset la stratégie
-            # Sauvegarder sans déclencher un nouvel import
-            super().save(update_fields=['mode_creation', 'source_file', 'import_strategy'])
+        return created

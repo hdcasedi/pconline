@@ -10,7 +10,7 @@ from modelcluster.models import ClusterableModel
 from taggit.models import TagBase, TaggedItemBase
 from taggit.managers import TaggableManager
 from wagtail.images.models import Image
-from .blocks import EnonceBlock, Section100Block, Section50_50Block, Section70_30Block, QuestionBlock
+from .blocks import EnonceBlock, Section100Block, Section50_50Block, Section70_30Block, Section75_25Block, QuestionBlock
 import json
 import re
 from typing import Optional, Dict, Any, Set
@@ -89,6 +89,7 @@ class ExoPageSimple(Page):
         ("s100", Section100Block()),
         ("s50_50", Section50_50Block()),
         ("s70_30", Section70_30Block()),
+        ("s75_25", Section75_25Block()),
         ("question", QuestionBlock()),
     ], use_json_field=True, blank=True, verbose_name="Contenu de l'exercice")
     
@@ -152,9 +153,18 @@ class ExoPageSimple(Page):
         if params_page:
             # Optionnel: seed depuis la querystring ?seed=
             seed = request.GET.get('seed') if request else None
+            print(f"DEBUG: Tentative génération paramètres pour page {self.id}, seed={seed}")
             try:
                 param_context = params_page.build_random_context(seed=seed)
-            except Exception:
+                print(f"DEBUG: Contexte généré pour page {self.id}: {param_context}")
+            except Exception as e:
+                # Log l'erreur pour le debugging
+                import logging
+                import traceback
+                logger = logging.getLogger(__name__)
+                logger.error(f"Erreur génération paramètres pour page {self.id}: {e}")
+                print(f"DEBUG: Erreur paramètres page {self.id}: {e}")
+                print(f"DEBUG: Traceback: {traceback.format_exc()}")
                 param_context = {}
             context['param_values'] = param_context
         else:
@@ -472,6 +482,7 @@ class ParametreExoPage(Page):
 
         def series_values(p: "ParamItem"):
             # Retourne une liste ordonnée de valeurs pour la série du paramètre
+            print(f"DEBUG: series_values pour paramètre {p.name} (type: {p.kind})")
             if p.kind == 'range':
                 if p.range_min is None or p.range_max is None or p.range_step is None or p.range_step <= 0:
                     return []
@@ -480,10 +491,19 @@ class ParametreExoPage(Page):
             elif p.kind == 'set':
                 return parse_set_items(p.set_text or '')
             elif p.kind == 'image':
-                return [e.image_id for e in p.sync_entries.all() if e.image_id] or [e.image_id for e in p.image_entries.all() if e.image_id]
+                # Logique originale : utiliser image_entries pour tous les paramètres d'images
+                return [e.image_id for e in p.image_entries.all() if e.image_id]
             elif p.kind == 'slot':
                 # Liste des variantes richtext
                 return [str(e.value_richtext or '') for e in p.sync_entries.all()]
+            elif p.kind == 'tableau':
+                # Pour les tableaux, on retourne toujours la même structure
+                # (pas de variantes synchronisées pour l'instant)
+                return [{
+                    'orientation': p.tableau_orientation,
+                    'header': p.tableau_header,
+                    'rows': p.tableau_rows.split('\n') if p.tableau_rows else []
+                }]
             else:
                 return []
 
@@ -506,6 +526,13 @@ class ParametreExoPage(Page):
                     elif param.kind == 'slot':
                         # Pas de défaut: vide si aucune variante
                         context[name] = ''
+                    elif param.kind == 'tableau':
+                        # Retourner la structure complète du tableau
+                        context[name] = {
+                            'orientation': param.tableau_orientation,
+                            'header': param.tableau_header,
+                            'rows': param.tableau_rows.split('\n') if param.tableau_rows else []
+                        }
                     else:
                         # range/set/image mal configurés
                         context[name] = None
@@ -527,6 +554,13 @@ class ParametreExoPage(Page):
                 elif param.kind == 'slot':
                     vals = series_values(param)
                     context[name] = rng.choice(vals) if vals else ''
+                elif param.kind == 'tableau':
+                    # Pour les tableaux non synchronisés, on retourne toujours la même structure
+                    context[name] = {
+                        'orientation': param.tableau_orientation,
+                        'header': param.tableau_header,
+                        'rows': param.tableau_rows.split('\n') if param.tableau_rows else []
+                    }
                 else:
                     context[name] = None
 
@@ -569,15 +603,20 @@ class ParametreExoPage(Page):
         et délègue à build_context_for_variant pour synchroniser tous les paramètres cochés.
         Sinon, effectue un tirage libre par paramètre (comportement non-synchro).
         """
+        print(f"DEBUG: build_random_context appelé pour page {self.id}, seed={seed}")
         K = self.compute_sync_K()
+        print(f"DEBUG: K calculé = {K}")
         if K and K > 0:
             rng = random.Random(seed)
             index = rng.randint(1, K)
+            print(f"DEBUG: Utilisation build_context_for_variant avec index={index}")
             return self.build_context_for_variant(index, seed=seed)
         # Pas de synchro: fallback sur ancienne logique param par param
         rng = random.Random(seed)
         ctx: Dict[str, Any] = {}
+        print(f"DEBUG: Traitement param par param, {self.param_items.count()} paramètres")
         for param in self.param_items.all():
+            print(f"DEBUG: Traitement paramètre {param.name} (type: {param.kind})")
             if param.sync_enabled:
                 # Même sans K, rester cohérent: essaye série sinon valeurs directes
                 return self.build_context_for_variant(1, seed=seed)
@@ -593,14 +632,30 @@ class ParametreExoPage(Page):
                     vals = [param.range_min + i * param.range_step for i in range(count)]
                 ctx[param.name] = rng.choice(vals) if vals else None
             elif param.kind == 'set':
-                vals = parse_set_items(param.set_text or '')
-                ctx[param.name] = rng.choice(vals) if vals else None
+                try:
+                    vals = parse_set_items(param.set_text or '')
+                    ctx[param.name] = rng.choice(vals) if vals else None
+                except Exception as e:
+                    print(f"DEBUG: Erreur paramètre set '{param.name}': {e}")
+                    ctx[param.name] = None
             elif param.kind == 'image':
+                # Pour les paramètres non synchronisés, utiliser image_entries
                 vals = [e.image_id for e in param.image_entries.all() if e.image_id]
                 ctx[param.name] = rng.choice(vals) if vals else None
             elif param.kind == 'slot':
-                vals = [str(e.value_richtext or '') for e in param.sync_entries.all()]
-                ctx[param.name] = rng.choice(vals) if vals else ''
+                try:
+                    vals = [str(e.value_richtext or '') for e in param.sync_entries.all()]
+                    ctx[param.name] = rng.choice(vals) if vals else ''
+                except Exception as e:
+                    print(f"DEBUG: Erreur paramètre slot '{param.name}': {e}")
+                    ctx[param.name] = ''
+            elif param.kind == 'tableau':
+                # Retourner la structure complète du tableau
+                ctx[param.name] = {
+                    'orientation': param.tableau_orientation,
+                    'header': param.tableau_header,
+                    'rows': param.tableau_rows.split('\n') if param.tableau_rows else []
+                }
             else:
                 ctx[param.name] = None
         # Évaluer les expr en dernier
@@ -628,6 +683,7 @@ class ParametreExoPage(Page):
                 except Exception:
                     val_out = expr_replaced
                 ctx[p.name] = val_out
+        print(f"DEBUG: Contexte final généré: {ctx}")
         return ctx
 
 
@@ -650,6 +706,7 @@ class ParamItem(ClusterableModel):
         ('set', 'Ensemble'),
         ('slot', 'Slot'),
         ('image', 'Image'),
+        ('tableau', 'Tableau'),
         ('expr', 'Expression'),
     ]
     
@@ -715,7 +772,27 @@ class ParamItem(ClusterableModel):
         blank=True,
         verbose_name="Code d'expression"
     )
-    
+
+    # Champs pour le type tableau
+    tableau_orientation = models.CharField(
+        max_length=1,
+        choices=[('h', 'Horizontal'), ('v', 'Vertical')],
+        default='h',
+        verbose_name="Orientation"
+    )
+
+    tableau_header = models.TextField(
+        blank=True,
+        verbose_name="Entête",
+        help_text="Titres séparés par des points-virgules (;)"
+    )
+
+    tableau_rows = models.TextField(
+        blank=True,
+        verbose_name="Lignes",
+        help_text="Chaque ligne sur une nouvelle ligne, valeurs séparées par des points-virgules (;)"
+    )
+
     panels = [
         # Ligne 1 : Synchro | Nom | Type
         FieldRowPanel([
@@ -735,6 +812,11 @@ class ParamItem(ClusterableModel):
         InlinePanel('sync_entries', heading="Variantes du slot (1 entrée = 1 version)", classname='param-field param-field-slot'),
         FieldPanel('expr_code', classname='param-field param-field-expr'),
         InlinePanel('image_entries', heading="Images", classname='param-field param-field-image'),
+        FieldRowPanel([
+            FieldPanel('tableau_orientation', classname='param-field param-field-tableau'),
+            FieldPanel('tableau_header', classname='param-field param-field-tableau'),
+        ], classname='param-field param-field-tableau'),
+        FieldPanel('tableau_rows', classname='param-field param-field-tableau'),
     ]
     
     class Meta:

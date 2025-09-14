@@ -1,0 +1,9 @@
+{% load wagtailcore_tags %}
+<div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+        {{ value.left|richtext }}
+    </div>
+    <div>
+        {{ value.right|richtext }}
+    </div>
+</div>

@@ -37,13 +37,22 @@ def qcm_json_for_cours(cours_page):
                 "correct": bool(opt.is_correct),
                 "explanation_html": opt.explanation or "",
             })
+        
+        # Sélectionner UN SEUL énoncé parmi tous les énoncés disponibles
+        statements = list(q.statements.all())
+        if not statements:
+            continue  # Pas d'énoncés, on saute
+            
+        # Choisir un énoncé au hasard
+        import random
+        statement = random.choice(statements)
         items.append({
             "kind": "A",
             "id": q.id,
-            "layout": q.layout,
-            "statement_html": q.statement,
-            "image": _img_url(q.image),
-            "video_url": q.video_url or "",
+            "layout": statement.layout,
+            "statement_html": statement.statement,
+            "image": _img_url(statement.image),
+            "video_url": statement.video_url or "",
             "requires_justification": bool(q.requires_justification),
             "explanation_html": q.explanation or "",
             "options": options,            # ≥4 attendu via backoffice
