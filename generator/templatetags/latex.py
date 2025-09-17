@@ -206,6 +206,24 @@ def html2tex_no_images_filter(value):
 def tex_filter(value):
     return mark_safe(_html_to_tex(value))
 
+@register.filter(name="tex_safe")
+def tex_safe_filter(value):
+    """Version stricte: pas de pass-through <tex>, tout est échappé."""
+    if value is None:
+        return mark_safe("")
+    s = str(value)
+    s = _html.unescape(s)
+    s = re.sub(r"(?is)<[^>]+>", "", s)
+    for a, b in [
+        ("\\", r"\\textbackslash{}"),
+        ("{", r"\\{"), ("}", r"\\}"),
+        ("#", r"\\#"), ("%", r"\\%"), ("&", r"\\&"),
+        ("_", r"\\_"), ("~", r"\\textasciitilde{}"), ("^", r"\\textasciicircum{}"),
+        ("$", r"\\$"),
+    ]:
+        s = s.replace(a, b)
+    return mark_safe(s)
+
 @register.filter
 def strip_badges(text):
     if not text:

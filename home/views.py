@@ -37,3 +37,7 @@ def homepage(request):
 
     # 🔹 Envoyer "data_json" au template
     return render(request, "home/home.html", {"data_json": data_json})
+
+
+def mon_compagnon_page(request):
+    return render(request, "home/mon_compagnon.html")

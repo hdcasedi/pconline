@@ -111,39 +111,39 @@
 {% for item in qcms %}
   {% if item.has_image %}
     {% if is_correction %}
-\QCMimageCorr{ {{ item.statement|tex }} }
+\QCMimageCorr{ {{ item.statement|html2tex }} }
 { {{ item.image_path }} }
-{ {{ item.A|tex }} }
-{ {{ item.B|tex }} }
-{ {{ item.C|tex }} }
-{ {{ item.D|tex }} }
-{ {{ item.points|floatformat:0 }} }
-{ {{ item.correct_index }} }
+{ {{ item.A|html2tex }} }
+{ {{ item.B|html2tex }} }
+{ {{ item.C|html2tex }} }
+{ {{ item.D|html2tex }} }
+{ {{ item.points|default:0|floatformat:0 }} }
+{ {{ item.correct_index|default:1 }} }
     {% else %}
-\QCMimage{ {{ item.statement|tex }} }
+\QCMimage{ {{ item.statement|html2tex }} }
 { {{ item.image_path }} }
-{ {{ item.A|tex }} }
-{ {{ item.B|tex }} }
-{ {{ item.C|tex }} }
-{ {{ item.D|tex }} }
-{ {{ item.points|floatformat:0 }} }
+{ {{ item.A|html2tex }} }
+{ {{ item.B|html2tex }} }
+{ {{ item.C|html2tex }} }
+{ {{ item.D|html2tex }} }
+{ {{ item.points|default:0|floatformat:0 }} }
     {% endif %}
   {% else %}
     {% if is_correction %}
-\QCMtexteCorr{ {{ item.statement|tex }} }
-{ {{ item.A|tex }} }
-{ {{ item.B|tex }} }
-{ {{ item.C|tex }} }
-{ {{ item.D|tex }} }
-{ {{ item.points|floatformat:0 }} }
-{ {{ item.correct_index }} }
+\QCMtexteCorr{ {{ item.statement|html2tex }} }
+{ {{ item.A|html2tex }} }
+{ {{ item.B|html2tex }} }
+{ {{ item.C|html2tex }} }
+{ {{ item.D|html2tex }} }
+{ {{ item.points|default:0|floatformat:0 }} }
+{ {{ item.correct_index|default:1 }} }
     {% else %}
-\QCMtexte{ {{ item.statement|tex }} }
-{ {{ item.A|tex }} }
-{ {{ item.B|tex }} }
-{ {{ item.C|tex }} }
-{ {{ item.D|tex }} }
-{ {{ item.points|floatformat:0 }} }
+\QCMtexte{ {{ item.statement|html2tex }} }
+{ {{ item.A|html2tex }} }
+{ {{ item.B|html2tex }} }
+{ {{ item.C|html2tex }} }
+{ {{ item.D|html2tex }} }
+{ {{ item.points|default:0|floatformat:0 }} }
     {% endif %}
   {% endif %}
 {% empty %}

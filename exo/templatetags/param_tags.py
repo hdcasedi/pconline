@@ -143,7 +143,39 @@ def render_with_params(context, block, param_values=None):
         # Valeurs par défaut
         view = options.get('view', 'eleve')
         orientation = options.get('orientation', param_value.get('orientation', 'h'))
-        n = int(options.get('n', '3'))
+
+        # Stabiliser N entre énoncé et correction si non précisé partout
+        n_cache = context.get('__table_n_cache')
+        if n_cache is None:
+            n_cache = {}
+            context['__table_n_cache'] = n_cache
+
+        if 'n' in options and options['n'] != '':
+            try:
+                n = int(options['n'])
+            except Exception:
+                n = 3
+            n_cache[name] = n
+        else:
+            if name in n_cache:
+                n = n_cache[name]
+            else:
+                # Essayer d'abord le contexte global du rendu (payload/params)
+                n_from_context = None
+                try:
+                    pv = context.get('param_values') or {}
+                    if isinstance(pv, dict) and isinstance(pv.get(name), dict):
+                        n_from_context = pv[name].get('n')
+                except Exception:
+                    n_from_context = None
+                if n_from_context is not None:
+                    try:
+                        n = int(n_from_context)
+                    except Exception:
+                        n = 3
+                else:
+                    n = int(param_value.get('n', 3)) if isinstance(param_value, dict) else 3
+                n_cache[name] = n
 
         import secrets, hashlib
 

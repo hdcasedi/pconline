@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Mon compagnon – Physique-Chimie{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+    <!-- Couverture à gauche -->
+    <div class="w-full">
+      <img src="{% static 'images/couvertureavant.jpg' %}" alt="Couverture Mon compagnon Physique‑Chimie" class="w-full h-auto rounded-xl border border-slate-200 shadow" />
+    </div>
+
+    <!-- Texte à droite -->
+    <div>
+      <span class="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold mb-3">Cobalt</span>
+      <h1 class="text-3xl font-bold text-blue-700 leading-snug mb-4">Explorez l'univers captivant de la physique chimie</h1>
+
+      <div class="prose prose-slate max-w-none">
+        <p>avec notre ouvrage spécialement conçu pour les collégiens. Ce livre sera votre compagnon inestimable tout au long de votre parcours pendant le cycle 4 (5ème, 4ème et 3ème).</p>
+
+        <h2 class="text-xl font-semibold text-slate-900 mt-6 mb-2">La physique chimie au collège</h2>
+        <p>Dans la première partie, plongez dans des cours soigneusement structurés et adaptés à chaque niveau. Chaque concept est présenté de manière claire et accessible, vous guidant progressivement vers une meilleure compréhension.</p>
+
+        <p>La deuxième partie vous offre une boîte à outils exceptionnelle. Grâce à des fiches méthodes percutantes, vous développerez des compétences essentielles pour la résolution de problèmes, la communication de vos résultats, l'interprétation expérimentale, et bien plus encore. Ces outils pratiques vous accompagneront ...</p>
+
+        <p>Que vous cherchiez à améliorer votre compréhension ou à adopter des méthodes d'apprentissage efficaces, ce livre est votre compagnon fiable.</p>
+      </div>
+
+      <!-- Bouton Amazon en bas -->
+      <div class="mt-6">
+        <a href="https://www.amazon.com/Mon-compagnon-Physique-chimie-coll%C3%A8ge-ebook/dp/B0CGXY44FK" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium shadow">
+          Aller sur Amazon
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M12.293 2.293a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L14 5.414V13a1 1 0 11-2 0V5.414L9.707 7.707A1 1 0 018.293 6.293l4-4z"/><path d="M3 9a1 1 0 011-1h3a1 1 0 010 2H5v6h10v-6h-2a1 1 0 110-2h3a1 1 0 011 1v7a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+

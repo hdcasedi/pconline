@@ -1,0 +1,389 @@
+
+ewcommand\QCMtexteCorr[7]{#1}
+{% load latex %}
+
+\documentclass[12pt,a4paper]{article}
+
+% ===== Encodage & langue =====
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% ===== Mise en page & graphismes =====
+\usepackage{geometry}
+\geometry{top=1.2cm, bottom=2cm, left=2cm, right=2cm}
+\usepackage{graphicx}
+\usepackage{array} % pour >{\raggedleft\arraybackslash} dans tabular
+\usepackage{tikz}
+
+% ===== Divers =====
+\usepackage{hyperref}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+% ===== CHEMISTRY & ROBUSTNESS =====
+% Compteur global des exercices
+\newcounter{exoTop}
+\makeatletter
+% Charger mhchem si pas déjà chargé
+\@ifpackageloaded{mhchem}{}{%
+  \IfFileExists{mhchem.sty}{%
+    \usepackage[version=4]{mhchem}%
+    \typeout{DEBUG: mhchem.sty FOUND -> LOADED}%
+  }{%
+    \typeout{DEBUG: mhchem.sty NOT FOUND -> FALLBACK ACTIVE}%
+  }%
+}
+% Fallback minimal si, pour une raison quelconque, mhchem n'est pas (ou n'a pas pu être) chargé :
+\@ifpackageloaded{mhchem}{%
+  \typeout{DEBUG: mhchem package is loaded at preamble.}%
+}{%
+  \providecommand{\ce}[1]{\textrm{#1}}% rend lisible sans planter
+}
+\makeatother
+
+% Atténue les Overfull \hbox (non bloquant)
+\setlength{\emergencystretch}{2em}
+
+\usepackage[none]{hyphenat}
+\sloppy
+
+% --- Macro standard pour ligne de réponse (flashcards) ---
+\newcommand{\AnswerLine}[1]{%
+  \par\smallskip\noindent\textbf{Réponse : }#1\par%
+}
+
+% ===== Unicode fixes (indices / exposants / symboles courants) =====
+\usepackage{newunicodechar}
+% Mapping Unicode -> LaTeX (grec, symboles courants)
+\DeclareUnicodeCharacter{03BB}{\ensuremath{\lambda}} % λ
+\DeclareUnicodeCharacter{03BC}{\ensuremath{\mu}}     % μ
+\DeclareUnicodeCharacter{03C0}{\ensuremath{\pi}}     % π
+\DeclareUnicodeCharacter{03B1}{\ensuremath{\alpha}}  % α
+\DeclareUnicodeCharacter{03B2}{\ensuremath{\beta}}   % β
+\DeclareUnicodeCharacter{03B3}{\ensuremath{\gamma}}  % γ
+\DeclareUnicodeCharacter{03B4}{\ensuremath{\delta}}  % δ
+\DeclareUnicodeCharacter{03B8}{\ensuremath{\theta}}  % θ
+\DeclareUnicodeCharacter{03C3}{\ensuremath{\sigma}}  % σ
+\DeclareUnicodeCharacter{03C4}{\ensuremath{\tau}}    % τ
+\DeclareUnicodeCharacter{03C6}{\ensuremath{\phi}}    % φ
+\DeclareUnicodeCharacter{03C9}{\ensuremath{\omega}}  % ω
+\DeclareUnicodeCharacter{0394}{\ensuremath{\Delta}}  % Δ
+\DeclareUnicodeCharacter{03A3}{\ensuremath{\Sigma}}  % Σ
+\DeclareUnicodeCharacter{03A9}{\ensuremath{\Omega}}  % Ω
+\DeclareUnicodeCharacter{00B0}{\ensuremath{^\circ}}  % °
+
+% Indices (₀..₉)
+\newunicodechar{₀}{$_0$}
+\newunicodechar{₁}{$_1$}
+\newunicodechar{₂}{$_2$}
+\newunicodechar{₃}{$_3$}
+\newunicodechar{₄}{$_4$}
+\newunicodechar{₅}{$_5$}
+\newunicodechar{₆}{$_6$}
+\newunicodechar{₇}{$_7$}
+\newunicodechar{₈}{$_8$}
+\newunicodechar{₉}{$_9$}
+
+% Exposants (⁰ ¹ ² ³ ⁴..⁹)
+\newunicodechar{⁰}{$^0$}
+\newunicodechar{¹}{$^1$}
+\newunicodechar{²}{$^2$}
+\newunicodechar{³}{$^3$}
+\newunicodechar{⁴}{$^4$}
+\newunicodechar{⁵}{$^5$}
+\newunicodechar{⁶}{$^6$}
+\newunicodechar{⁷}{$^7$}
+\newunicodechar{⁸}{$^8$}
+\newunicodechar{⁹}{$^9$}
+
+% Autres utiles
+\newunicodechar{°}{\textdegree}
+\newunicodechar{µ}{$\mu$}
+\newunicodechar{×}{$\times$}
+\newunicodechar{−}{$-$}  % signe moins U+221
+
+% =========================================================
+% Variables côté Jinja2 -> macros LaTeX attendues par l'entête
+% =========================================================
+% type ds / serie
+% Type DS (booléen LaTeX)
+\newif\ifDS
+{% if type == "ds" %}\DStrue{% else %}\DSfalse{% endif %}
+
+% titre / barème / sous-titres
+\def\titre{ {{ titre|tex }} }
+\def\baremeGlobal{ {{ barreme_obtenu|default:barreme_cible|default:0 }} }
+\def\sousTitreUn{ {{ sous_titre_1|tex }} }
+\def\sousTitreDeux{ {{ sous_titre_2|tex }} }
+
+% --- Logo: flag + chemin (pas d'include si vide) ---
+\newif\ifHAVELOGO
+{% if header_logo_path and header_logo_path != "" %}
+  \HAVELOGOtrue
+{% else %}
+  \HAVELOGOfalse
+{% endif %}
+
+
+
+% Définition du chemin du logo pour header.tex
+\def\headerLogoPath{ {{ header_logo_path|default:"" }} }
+
+% DEBUG: Afficher le chemin du logo
+\typeout{DEBUG: header_logo_path = {{ header_logo_path }}}
+\typeout{DEBUG: headerLogoPath = \headerLogoPath}
+
+% lignes du pavé gauche si pas de logo
+\def\headerLineUn{ {{ header_line1|default:""|tex }} }
+\def\headerLineDeux{ {{ header_line2|default:""|tex }} }
+\def\headerLineTrois{ {{ header_line3|default:""|tex }} }
+
+% classe / nom (tu peux les alimenter via payload si tu veux)
+\def\classe{ {{ classe|default:""|tex }} }
+\def\nomPrenom{ Nom et Prénom : }
+
+% énoncé (0) ou correction (1)
+\def\isCorrection{ {{ isCorrection|default:0 }} }
+
+\begin{document}
+
+% ===== ENTÊTE =====
+\input{header.tex}
+
+% ===== INFORMATION BARÈME AJUSTÉ =====
+{% if barreme_obtenu != barreme_cible %}
+\vspace{0.5cm}
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{
+\centering
+\textbf{Note :} Le barème a été ajusté de {{ barreme_cible }} points à {{ barreme_obtenu }} points\\
+en raison du nombre limité d'exercices disponibles.
+}}
+\end{center}
+\vspace{0.5cm}
+{% endif %}
+
+% ===== SECTION A : QCM =====
+{% if qcms|length > 0 %}
+\input{section_qcm.tex}
+{% endif %}
+
+% ===== SECTION B : Flashcards =====
+{% if flashcards|length > 0 %}
+\input{section_flashcards.tex}
+{% endif %}
+
+% ===== SECTION C : Exercices =====
+{% if exercices|length > 0 %}
+\input{section_exercices.tex}
+{% endif %}
+
+\end{document}
+% generator/templates/generator/pdf/header.tex
+% Attend que main.tex ait défini :
+% \typeDS, \ds, \serie, \titre, \baremeGlobal, \sousTitreUn, \sousTitreDeux,
+% \headerLineUn, \headerLineDeux, \headerLineTrois, \classe, \nomPrenom, \isCorrection
+% ainsi que \ifHAVELOGO et la variable de template {{ header_logo_path }}
+
+\noindent
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} p{0.68\textwidth} p{0.28\textwidth}}
+  \normalsize \nomPrenom & \raggedleft \normalsize Classe : \classe\\
+\end{tabular*}
+
+\vspace{0.25cm}
+
+\noindent
+\begin{tikzpicture}[x=1cm,y=1cm, line width=0.5pt]
+
+  % Dimensions
+  \pgfmathsetmacro{\X}{\textwidth/1cm}
+  \def\H{2}
+
+  % Cadres
+  \draw (0,0) rectangle (\X,\H);     % grand rectangle
+  \draw (0,0) rectangle (2,\H);      % pavé gauche
+
+  % Pavé droit (barème) uniquement en DS
+  \ifx\typeDS\ds
+    \draw (\X-2,0) rectangle (\X,\H);
+    \draw (\X-2,0) -- (\X,\H);
+  \fi
+
+  % Contenu pavé gauche : logo OU 3 lignes
+  \ifHAVELOGO
+    \node at (1,1) {\includegraphics[width=2cm,height=2cm,keepaspectratio]{\headerLogoPath}};
+  \else
+    \node[align=center] at (1,1.35) {\large\bfseries \headerLineUn};
+    \node[align=center] at (1,1.00) {\small \headerLineDeux};
+    \node[align=center] at (1,0.65) {\small \headerLineTrois};
+  \fi
+
+  % Abscisse du bloc central (diffère entre DS et Série)
+  \ifx\typeDS\ds
+    \pgfmathsetmacro{\XC}{\X/2}
+  \else
+    \pgfmathsetmacro{\XC}{(\X+2)/2}
+  \fi
+
+  % Titre et sous-titres
+  \node[align=center] at (\XC,1.45) {\Large \bfseries \titre \ifnum\isCorrection=1 ~|~ Correction\fi};
+  \node[align=center] at (\XC,0.95) {\normalsize \sousTitreUn};
+  \node[align=center] at (\XC,0.55) {\normalsize \sousTitreDeux};
+
+  % Barème (DS)
+  \ifx\typeDS\ds
+    \node[align=center] at (\X-0.5,0.7) {\Large \bfseries \baremeGlobal};
+  \fi
+
+\end{tikzpicture}
+{% load latex %}
+
+% ====== QUESTIONS DE COURS : EN-TÊTE ======
+{% if has_qcms or has_flashcards %}
+  % Démarre l'exercice 1 une seule fois ici (si QCM présents)
+  \setcounter{exoTop}{1}
+  \noindent\textbf{Exercice \Roman{exoTop} -- Questions de cours}\par\vspace{4pt}
+{% endif %}
+
+% ====== TITRE DE SOUS-SECTION (A. si QCM + Flashcards, sinon sans lettre) ======
+{% if has_qcms %}
+  \noindent\textbf{
+    {% if has_flashcards %}A. {% endif %}QCM
+    {% if qcm_points_sum %} ({{ qcm_points_sum|floatformat:0 }} pt){% endif %}
+  }\par\vspace{6pt}
+{% endif %}
+
+% ============================
+% COMPTEUR
+% ============================
+\newcounter{qcmno}
+
+% ============================
+% MACROS ENONCE
+% ============================
+
+% QCM texte pur
+\newcommand{\QCMtexte}[6]{%
+  \stepcounter{qcmno}%
+  \noindent\textbf{\theqcmno.}~#1
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) #2 & B) #3 & \\
+    \multicolumn{2}{c}{} & \textbf{#6 pt} \\
+    C) #4 & D) #5 & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% QCM texte + image
+\newcommand{\QCMimage}[7]{%
+  \stepcounter{qcmno}%
+  \noindent
+  \begin{minipage}[t]{0.69\linewidth}
+    \textbf{\theqcmno.}~#1\par
+  \end{minipage}%
+  \hspace{0.02\linewidth}%
+  \begin{minipage}[t]{0.29\linewidth}
+    \vspace{-2pt}%
+    \includegraphics[width=\linewidth]{#2}
+  \end{minipage}
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) #3 & B) #4 & \\
+    \multicolumn{2}{c}{} & \textbf{#7 pt} \\
+    C) #5 & D) #6 & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% ============================
+% MACROS CORRECTION
+% ============================
+
+% QCM texte pur (bonne réponse en gras)
+\newcommand{\QCMtexteCorr}[7]{%
+  \stepcounter{qcmno}%
+  \noindent\textbf{\theqcmno.}~#1
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) \ifnum#7=1 \textbf{#2} \else #2 \fi &
+    B) \ifnum#7=2 \textbf{#3} \else #3 \fi & \\
+    \multicolumn{2}{c}{} & \textbf{#6 pt} \\
+    C) \ifnum#7=3 \textbf{#4} \else #4 \fi &
+    D) \ifnum#7=4 \textbf{#5} \else #5 \fi & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% QCM image (bonne réponse en gras)
+\newcommand{\QCMimageCorr}[8]{%
+  \stepcounter{qcmno}%
+  \noindent
+  \begin{minipage}[t]{0.69\linewidth}
+    \textbf{\theqcmno.}~#1\par
+  \end{minipage}%
+  \hspace{0.02\linewidth}%
+  \begin{minipage}[t]{0.29\linewidth}
+    \vspace{-2pt}%
+    \includegraphics[width=\linewidth]{#2}
+  \end{minipage}
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.45\linewidth}@{}p{0.45\linewidth}@{}>{\raggedleft\arraybackslash}p{0.10\linewidth}@{}}
+    A) \ifnum#8=1 \textbf{#3} \else #3 \fi &
+    B) \ifnum#8=2 \textbf{#4} \else #4 \fi & \\
+    \multicolumn{2}{c}{} & \textbf{#7 pt} \\
+    C) \ifnum#8=3 \textbf{#5} \else #5 \fi &
+    D) \ifnum#8=4 \textbf{#6} \else #6 \fi & \\
+  \end{tabular}
+  \vspace{1.2em}
+}
+
+% ============================
+% SECTION
+% ============================
+
+{% for item in qcms %}
+  {% if item.has_image %}
+    {% if is_correction %}
+\QCMimageCorr{ {{ item.statement|tex_safe }} }
+{ {{ item.image_path }} }
+{ {{ item.A|tex_safe }} }
+{ {{ item.B|tex_safe }} }
+{ {{ item.C|tex_safe }} }
+{ {{ item.D|tex_safe }} }
+{ {{ item.points|default:0|floatformat:0 }} }
+{ {{ item.correct_index|default:1 }} }
+    {% else %}
+\QCMimage{ {{ item.statement|tex_safe }} }
+{ {{ item.image_path }} }
+{ {{ item.A|tex_safe }} }
+{ {{ item.B|tex_safe }} }
+{ {{ item.C|tex_safe }} }
+{ {{ item.D|tex_safe }} }
+{ {{ item.points|default:0|floatformat:0 }} }
+    {% endif %}
+  {% else %}
+    {% if is_correction %}
+\QCMtexteCorr{ {{ item.statement|tex_safe }} }
+{ {{ item.A|tex_safe }} }
+{ {{ item.B|tex_safe }} }
+{ {{ item.C|tex_safe }} }
+{ {{ item.D|tex_safe }} }
+{ {{ item.points|default:0|floatformat:0 }} }
+{ {{ item.correct_index|default:1 }} }
+    {% else %}
+\QCMtexte{ {{ item.statement|tex_safe }} }
+{ {{ item.A|tex_safe }} }
+{ {{ item.B|tex_safe }} }
+{ {{ item.C|tex_safe }} }
+{ {{ item.D|tex_safe }} }
+{ {{ item.points|default:0|floatformat:0 }} }
+    {% endif %}
+  {% endif %}
+{% empty %}
+\noindent\emph{Aucun QCM disponible.}
+{% endfor %}

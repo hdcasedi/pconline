@@ -585,16 +585,24 @@ def pdf_build(request: HttpRequest, mode: str) -> HttpResponse:
             logger = logging.getLogger(__name__)
             logger.info(f"DEBUG PDF: Traitement de {len(ex_page.contenu)} blocs pour la page {ex_page.id}")
             
+            # Contexte partagé pour stabiliser N et les seeds entre énoncé et solution
+            shared_context = {
+                'request': request,
+                'param_values': ex.get("param_values", {}) or {},
+            }
+            # Graine stable si disponible (cohérente avec preview)
+            try:
+                base_seed = str(request.session.get("selection_seed") or payload.get("seed") or "0")
+                shared_context['K'] = base_seed
+                shared_context['__render_seed'] = int(hashlib.md5(base_seed.encode()).hexdigest()[:8], 16)
+            except Exception:
+                pass
+
             for block in ex_page.contenu:
                 try:
-                    # Créer un contexte minimal pour le rendu
-                    context = {
-                        'request': request,
-                        'param_values': ex.get("param_values", {}) or {},
-                    }
-                    # Rendre le bloc avec les paramètres
+                    # Rendre le bloc avec les paramètres, en réutilisant le même contexte
                     param_values = ex.get("param_values", {}) or {}
-                    rendered_html = render_with_params(context, block, param_values)
+                    rendered_html = render_with_params(shared_context, block, param_values)
                     
                     # Filets de secours pour symboles (mojibake/grec) avant passage LaTeX
                     try:
@@ -731,6 +739,12 @@ def pdf_build(request: HttpRequest, mode: str) -> HttpResponse:
         # Mode pour les templates
         "mode": mode,
     }
+
+    # Fournir également des graines stables aux templates LaTeX pour les tableaux dynamiques
+    ctx.update({
+        "K": str(request.session.get("selection_seed") or payload.get("seed") or "0"),
+        "__render_seed": int(hashlib.md5(str(request.session.get("selection_seed") or payload.get("seed") or "0").encode()).hexdigest()[:8], 16),
+    })
 
     # Totaux et flags pour l'entête "Questions de cours"
     qcm_points_sum = sum(float(x.get("points") or 0) for x in qcm_for_tex)
@@ -962,6 +976,9 @@ def qcm_preview(request: HttpRequest) -> HttpResponse:
     ctx = {
         "type": (payload.get("type") or "ds"),
         "seed_effective": str(seed),
+        # Graine stable pour tableaux dynamiques dans les templates
+        "K": str(seed),
+        "__render_seed": int(hashlib.md5(str(seed).encode()).hexdigest()[:8], 16),
         "qcms": qcms_for_template,
         "qa_cards": bundle_json.get("flashcards", []),
         "exercices": exercices_for_template,

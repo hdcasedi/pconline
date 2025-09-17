@@ -7,6 +7,9 @@ echo "🔹 Activation de l'environnement virtuel..."
 source .venv/bin/activate
 
 echo "🔹 Application des migrations..."
+python manage.py makemigrations 
+
+echo "🔹 Application des migrations..."
 python manage.py migrate --noinput
 
 echo "🔹 Collecte des fichiers statiques..."

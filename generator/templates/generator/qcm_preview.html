@@ -3,6 +3,16 @@
 {% load param_tags %}
 
 {% block content %}
+  <style>
+    /* Styles tables similaires aux pages de cours */
+    .prose table { width: 100%; border-collapse: collapse; border: 1px solid #bfdbfe; }
+    .prose thead tr { background-color: #2563eb; color: #ffffff; }
+    .prose th { font-weight: 600; border-bottom: 1px solid #1e40af; }
+    .prose th, .prose td { padding: 0.75rem 1rem; text-align: center; }
+    .prose tbody tr:nth-child(odd) { background-color: #dbeafe; }
+    .prose tbody tr:nth-child(even) { background-color: #eff6ff; }
+    .prose tbody tr:hover { background-color: #bfdbfe; }
+  </style>
   <h1 class="text-2xl font-bold mb-4">
     Prévisualisation ({{ type|upper }})
     {% if type == "ds" %}
@@ -66,9 +76,11 @@
         <div class="mt-3 flex items-start justify-between gap-6">
           <ul class="list-none space-y-2 flex-1">
             {% for opt in item.options %}
-              <li class="flex items-start gap-2 {% if forloop.counter == item.correct_index %}text-green-700 font-bold{% endif %}">
-                <span class="shrink-0">[ ] {{ "ABCD"|slice:forloop.counter0 }})</span>
-                <span class="prose max-w-none">{{ opt|safe }}</span>
+              <li class="flex items-start gap-2">
+                <span class="shrink-0">
+                  {% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% elif forloop.counter0 == 3 %}D{% else %}{{ forloop.counter }}{% endif %})
+                </span>
+                <div class="prose max-w-none">{{ opt|safe }}</div>
               </li>
             {% endfor %}
           </ul>
@@ -77,7 +89,9 @@
           </div>
         </div>
 
-        <div class="mt-3 p-3 rounded bg-green-50 border border-green-200 text-green-800">
+        <button class="mt-3 px-3 py-1.5 rounded bg-emerald-600 text-white text-sm hover:bg-emerald-700 js-toggle-answer"
+                data-show="Afficher la correction" data-hide="Masquer la correction">Afficher la correction</button>
+        <div class="mt-3 p-3 rounded bg-green-50 border border-green-200 text-green-800 js-answer hidden">
           <span class="font-medium">Correction :</span>
           <span>✅ {{ item.correct_letter }}) </span>
           <span class="prose inline max-w-none">{{ item.correct_text|safe }}</span>
@@ -98,7 +112,9 @@
         {% if qa.image %}
           <div class="mt-3">{% image qa.image max-600x400 class="rounded shadow" %}</div>
         {% endif %}
-        <div class="mt-2 font-medium text-green-600">
+        <button class="mt-3 px-3 py-1.5 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 js-toggle-answer"
+                data-show="Afficher la réponse" data-hide="Masquer la réponse">Afficher la réponse</button>
+        <div class="mt-2 font-medium text-green-600 js-answer hidden">
           Réponse : <span class="prose max-w-none align-middle">{{ qa.answer_html|safe }}</span>
         </div>
       </div>
@@ -148,7 +164,9 @@
                 </div>
                 {% if block.value.solution %}
                   <div class="border-t pt-4">
-                    <div class="mt-4 prose max-w-none text-green-700">
+                    <button class="mt-3 px-3 py-1.5 rounded bg-emerald-600 text-white text-sm hover:bg-emerald-700 js-toggle-answer"
+                            data-show="Afficher la solution" data-hide="Masquer la solution">Afficher la solution</button>
+                    <div class="mt-4 prose max-w-none text-green-700 js-answer hidden">
                       {% for child in block.value.solution %}
                         {% if exercice.param_values %}
                           {% render_with_params child exercice.param_values %}
@@ -174,4 +192,23 @@
       </div>
     {% endfor %}
   {% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  document.querySelectorAll('.js-toggle-answer').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var ans = btn.nextElementSibling;
+      if(!ans) return;
+      ans.classList.toggle('hidden');
+      var showLabel = btn.getAttribute('data-show') || 'Afficher';
+      var hideLabel = btn.getAttribute('data-hide') || 'Masquer';
+      btn.textContent = ans.classList.contains('hidden') ? showLabel : hideLabel;
+      if (!ans.classList.contains('hidden') && window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([ans]).catch(function(){});
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
