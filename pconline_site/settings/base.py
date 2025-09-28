@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # CKEditor 5
+    "django_ckeditor_5",
 ]
 
 MIDDLEWARE = [
@@ -157,6 +159,20 @@ STATIC_URL = "/static/"
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
+
+CKEDITOR_5_CONFIGS = {
+    "default": {
+        "toolbar": [
+            "heading", "|",
+            "bold", "italic", "underline", "strikethrough", "|",
+            "link", "blockQuote", "imageUpload", "insertTable", "mediaEmbed", "|",
+            "bulletedList", "numberedList", "outdent", "indent", "|",
+            "code", "codeBlock", "|",
+            "undo", "redo",
+        ],
+        "language": "fr",
+    }
+}
 
 # Default storage settings
 # See https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES

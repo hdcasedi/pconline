@@ -25,6 +25,7 @@ urlpatterns = [
     path("flashcard/", include('flashcard.urls')),
     path("admin/", include(wagtailadmin_urls)),
     path("documents/", include(wagtaildocs_urls)),
+    path("ckeditor5/", include('django_ckeditor_5.urls')),
     path("search/", search_views.search, name="search"),
 ]
 

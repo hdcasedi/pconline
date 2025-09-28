@@ -2,5 +2,8 @@
   "scripts": {
     "build": "tailwindcss -i ./static/src/input.css -o ./static/css/output.css",
     "watch": "tailwindcss -i ./static/src/input.css -o ./static/css/output.css --watch"
+  },
+  "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^41.4.2"
   }
 }
